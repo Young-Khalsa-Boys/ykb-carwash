@@ -32,3 +32,9 @@ CREATE POLICY "Public Insert Bookings" ON bookings FOR INSERT WITH CHECK (true);
 -- Allow authenticated users (admin) to manage everything
 CREATE POLICY "Admin Manage Slots" ON slots FOR ALL TO authenticated USING (true);
 CREATE POLICY "Admin Manage Bookings" ON bookings FOR ALL TO authenticated USING (true);
+
+-- Explicitly grant permissions
+GRANT ALL ON TABLE slots TO postgres, authenticated, service_role;
+GRANT SELECT ON TABLE slots TO anon;
+GRANT ALL ON TABLE bookings TO postgres, authenticated, service_role;
+GRANT INSERT ON TABLE bookings TO anon;

@@ -21,6 +21,10 @@ export default function AdminDashboard() {
   const [slots, setSlots] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'bookings' | 'slots'>('bookings')
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [password, setPassword] = useState('')
+  const [authError, setAuthError] = useState('')
+  const [verifying, setVerifying] = useState(false)
   
   // New Slot Form
   const [newSlot, setNewSlot] = useState({
@@ -33,8 +37,43 @@ export default function AdminDashboard() {
   const supabase = createClient()
 
   useEffect(() => {
-    fetchData()
+    const authStatus = sessionStorage.getItem('admin_authenticated')
+    if (authStatus === 'true') {
+      setIsAuthenticated(true)
+      fetchData()
+    } else {
+      setLoading(false)
+    }
   }, [])
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    setVerifying(true)
+    setAuthError('')
+
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-admin', {
+        body: { password }
+      })
+
+      if (error || !data.success) {
+        throw new Error(data?.message || 'Authentication failed')
+      }
+
+      sessionStorage.setItem('admin_authenticated', 'true')
+      setIsAuthenticated(true)
+      fetchData()
+    } catch (err: any) {
+      setAuthError(err.message)
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  function handleLogout() {
+    sessionStorage.removeItem('admin_authenticated')
+    setIsAuthenticated(false)
+  }
 
   async function fetchData() {
     setLoading(true)
@@ -56,6 +95,51 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (loading && !isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <div className="bg-white p-8 rounded-xl shadow-lg border border-gray-200 max-w-md w-full">
+          <div className="text-center mb-8">
+            <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Settings className="w-8 h-8 text-primary" />
+            </div>
+            <h1 className="text-2xl font-bold text-gray-900">Admin Login</h1>
+            <p className="text-gray-500">Enter your password to access the dashboard</p>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-1">
+              <label className="text-sm font-semibold text-gray-700">Password</label>
+              <input 
+                required 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                placeholder="••••••••"
+              />
+            </div>
+            {authError && <div className="text-red-600 text-sm">{authError}</div>}
+            <button 
+              disabled={verifying}
+              className="w-full bg-primary text-white py-3 rounded-lg font-bold hover:bg-opacity-90 disabled:bg-gray-300 transition-all flex items-center justify-center gap-2"
+            >
+              {verifying ? 'Verifying...' : 'Access Dashboard'}
+            </button>
+          </form>
+        </div>
+      </div>
+    )
   }
 
   async function addSlot(e: React.FormEvent) {
@@ -127,7 +211,10 @@ export default function AdminDashboard() {
           </button>
         </nav>
         <div className="p-4 border-t border-white/10">
-          <button className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 text-gray-400">
+          <button 
+            onClick={handleLogout}
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-white/5 text-gray-400 transition-colors"
+          >
             <LogOut className="w-5 h-5" />
             Logout
           </button>
