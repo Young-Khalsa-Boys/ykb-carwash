@@ -37,13 +37,16 @@ export default function AdminDashboard() {
   const supabase = createClient()
 
   useEffect(() => {
-    const authStatus = sessionStorage.getItem('admin_authenticated')
-    if (authStatus === 'true') {
-      setIsAuthenticated(true)
-      fetchData()
-    } else {
-      setLoading(false)
+    async function checkAuth() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setIsAuthenticated(true)
+        fetchData()
+      } else {
+        setLoading(false)
+      }
     }
+    checkAuth()
   }, [])
 
   async function handleLogin(e: React.FormEvent) {
@@ -52,15 +55,22 @@ export default function AdminDashboard() {
     setAuthError('')
 
     try {
-      const { data, error } = await supabase.functions.invoke('verify-admin', {
+      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-admin', {
         body: { password }
       })
 
-      if (error || !data.success) {
-        throw new Error(data?.message || 'Authentication failed')
+      if (verifyError || !verifyData.success) {
+        throw new Error(verifyData?.message || 'Authentication failed')
       }
 
-      sessionStorage.setItem('admin_authenticated', 'true')
+      // Now sign in with the admin credentials returned from the edge function
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: verifyData.email,
+        password: password
+      })
+
+      if (signInError) throw signInError
+
       setIsAuthenticated(true)
       fetchData()
     } catch (err: any) {
@@ -70,8 +80,8 @@ export default function AdminDashboard() {
     }
   }
 
-  function handleLogout() {
-    sessionStorage.removeItem('admin_authenticated')
+  async function handleLogout() {
+    await supabase.auth.signOut()
     setIsAuthenticated(false)
   }
 
