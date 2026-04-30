@@ -77,7 +77,7 @@ export default function BookingPage() {
       if (bookingsError) throw bookingsError
 
       // Count bookings per slot
-      const counts: Record<string, number> = {}
+      const counts: Record<string, number> = {};
       (bookingsData as any[])?.forEach((b: any) => {
         counts[b.slot_id] = (counts[b.slot_id] || 0) + 1
       })
