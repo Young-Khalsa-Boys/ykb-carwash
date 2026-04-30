@@ -38,3 +38,6 @@ GRANT ALL ON TABLE slots TO postgres, authenticated, service_role;
 GRANT SELECT ON TABLE slots TO anon;
 GRANT ALL ON TABLE bookings TO postgres, authenticated, service_role;
 GRANT INSERT ON TABLE bookings TO anon;
+
+-- Add Realtime to Bookings and Slots Tables
+ALTER PUBLICATION supabase_realtime ADD TABLE bookings, slots;

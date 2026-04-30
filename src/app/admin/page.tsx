@@ -155,7 +155,7 @@ export default function AdminDashboard() {
 
   const getBookingsBySlot = () => {
     const grouped: Record<string, any[]> = {}
-    bookings.filter(b => b.status === 'pending' || b.status === 'waiting').forEach(b => {
+    bookings.filter(b => b.status !== 'cancelled').forEach(b => {
       const slotId = b.slot_id
       if (!grouped[slotId]) grouped[slotId] = []
       grouped[slotId].push(b)
@@ -164,7 +164,19 @@ export default function AdminDashboard() {
   }
 
   const completedBookings = bookings.filter(b => b.status === 'completed')
-  const bookingsBySlot = getBookingsBySlot()
+  const waitingBookings = bookings.filter(b => b.status === 'pending' || b.status === 'waiting')
+  
+  const getWaitingBookingsBySlot = () => {
+    const grouped: Record<string, any[]> = {}
+    waitingBookings.forEach(b => {
+      const slotId = b.slot_id
+      if (!grouped[slotId]) grouped[slotId] = []
+      grouped[slotId].push(b)
+    })
+    return grouped
+  }
+
+  const bookingsBySlot = getWaitingBookingsBySlot()
 
   if (loading && !isAuthenticated) {
     return (
@@ -338,50 +350,53 @@ export default function AdminDashboard() {
                   Active Queue (Waiting)
                 </h3>
                 
-                {slots.filter(s => bookingsBySlot[s.id]?.length > 0).map(slot => (
-                  <div key={slot.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
-                      <div className="flex items-center gap-3">
-                        <span className="font-bold text-gray-900">
-                          {format(new Date(slot.start_time), 'EEEE, MMM d')}
-                        </span>
-                        <span className="text-gray-500">
-                          {format(new Date(slot.start_time), 'h:mm a')} - {format(new Date(slot.end_time), 'h:mm a')}
+                {slots.filter(s => bookingsBySlot[s.id]?.length > 0).map(slot => {
+                  const totalRegCount = bookings.filter(b => b.slot_id === slot.id && b.status !== 'cancelled').length
+                  return (
+                    <div key={slot.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                      <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                          <span className="font-bold text-gray-900">
+                            {format(new Date(slot.start_time), 'EEEE, MMM d')}
+                          </span>
+                          <span className="text-gray-500">
+                            {format(new Date(slot.start_time), 'h:mm a')} - {format(new Date(slot.end_time), 'h:mm a')}
+                          </span>
+                        </div>
+                        <span className="text-sm font-semibold px-3 py-1 bg-primary/10 text-primary rounded-full">
+                          {totalRegCount} / {slot.max_capacity} Occupied
                         </span>
                       </div>
-                      <span className="text-sm font-semibold px-3 py-1 bg-primary/10 text-primary rounded-full">
-                        {bookingsBySlot[slot.id].length} / {slot.max_capacity} Registered
-                      </span>
+                      <table className="w-full text-left">
+                        <tbody className="divide-y divide-gray-200">
+                          {bookingsBySlot[slot.id].map((booking) => (
+                            <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4">
+                                <div className="font-semibold text-gray-900">{booking.name}</div>
+                                <div className="text-sm text-gray-500">{booking.phone}</div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">{booking.license_plate}</span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="text-xs text-gray-400">Signed up: {format(new Date(booking.created_at), 'h:mm a')}</span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <button 
+                                  onClick={() => updateBookingStatus(booking.id, 'completed')}
+                                  className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-lg font-semibold hover:bg-green-100 transition-colors"
+                                >
+                                  <CheckCircle className="w-4 h-4" />
+                                  Complete
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <table className="w-full text-left">
-                      <tbody className="divide-y divide-gray-200">
-                        {bookingsBySlot[slot.id].map((booking) => (
-                          <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-6 py-4">
-                              <div className="font-semibold text-gray-900">{booking.name}</div>
-                              <div className="text-sm text-gray-500">{booking.phone}</div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">{booking.license_plate}</span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="text-xs text-gray-400">Signed up: {format(new Date(booking.created_at), 'h:mm a')}</span>
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <button 
-                                onClick={() => updateBookingStatus(booking.id, 'completed')}
-                                className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-lg font-semibold hover:bg-green-100 transition-colors"
-                              >
-                                <CheckCircle className="w-4 h-4" />
-                                Complete
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ))}
+                  )
+                })}
 
                 {Object.keys(bookingsBySlot).length === 0 && (
                   <div className="bg-white p-12 text-center rounded-xl border border-dashed border-gray-300 text-gray-500">
@@ -515,7 +530,7 @@ export default function AdminDashboard() {
               {/* Slots List */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {slots.map((slot) => {
-                  const regCount = bookings.filter(b => b.slot_id === slot.id && (b.status === 'pending' || b.status === 'waiting')).length
+                  const regCount = bookings.filter(b => b.slot_id === slot.id && b.status !== 'cancelled').length
                   return (
                     <div key={slot.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 group hover:border-primary/50 transition-all">
                       <div className="flex justify-between items-start mb-4">

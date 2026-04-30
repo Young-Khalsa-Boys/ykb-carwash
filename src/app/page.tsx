@@ -22,26 +22,46 @@ export default function BookingPage() {
 
   useEffect(() => {
     fetchSlots()
+
+    // Real-time updates for slot availability
+    const channel = supabase
+      .channel('public_slots')
+      .on('postgres_changes', { event: '*', table: 'bookings' }, () => {
+        fetchSlots()
+      })
+      .on('postgres_changes', { event: '*', table: 'slots' }, () => {
+        fetchSlots()
+      })
+      .subscribe()
+
+    // Refresh slots periodically to handle time passing
+    const interval = setInterval(fetchSlots, 60000)
+
+    return () => {
+      supabase.removeChannel(channel)
+      clearInterval(interval)
+    }
   }, [])
 
   async function fetchSlots() {
     try {
       // Fetch slots
+      const now = new Date().toISOString()
       const { data: slotsData, error: slotsError } = await supabase
         .from('slots')
         .select('*')
         .eq('is_active', true)
-        .gte('start_time', new Date().toISOString())
+        .gte('start_time', now) // Still filter by start_time >= now
         .order('start_time', { ascending: true })
 
       if (slotsError) throw slotsError
 
-      // Fetch booking counts for these slots
+      // Fetch booking counts for these slots (include completed)
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select('slot_id, status')
         .in('slot_id', slotsData.map(s => s.id))
-        .or('status.eq.pending,status.eq.waiting')
+        .neq('status', 'cancelled')
 
       if (bookingsError) throw bookingsError
 
@@ -52,11 +72,13 @@ export default function BookingPage() {
       })
 
       // Combine and filter
-      const availableSlots = slotsData.map(slot => ({
-        ...slot,
-        current_bookings: counts[slot.id] || 0,
-        is_full: (counts[slot.id] || 0) >= slot.max_capacity
-      }))
+      const availableSlots = slotsData
+        .filter(slot => new Date(slot.start_time) > new Date()) // Extra client-side filter for precision
+        .map(slot => ({
+          ...slot,
+          current_bookings: counts[slot.id] || 0,
+          is_full: (counts[slot.id] || 0) >= slot.max_capacity
+        }))
 
       setSlots(availableSlots)
     } catch (err: any) {
