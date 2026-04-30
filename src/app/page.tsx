@@ -164,7 +164,8 @@ export default function BookingPage() {
       <div className="max-w-2xl mx-auto">
         {/* Header */}
         <div className="text-center mb-10">
-          <h1 className="text-3xl font-bold text-primary mb-2">YKB Car Wash Booking</h1>
+          <img src="/logo.png" alt="YKB Logo" className="h-32 mx-auto mb-4" />
+          <h1 className="text-3xl font-bold text-primary mb-2">Car Wash Booking</h1>
           <p className="text-gray-600 italic">Fast, Reliable, and Community-Driven</p>
           <div className="h-1 w-20 bg-accent mx-auto mt-4 rounded-full"></div>
         </div>

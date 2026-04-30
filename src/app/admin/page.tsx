@@ -310,10 +310,10 @@ export default function AdminDashboard() {
     <div className="min-h-screen bg-gray-100 flex">
       {/* Sidebar */}
       <div className="w-64 bg-primary text-white flex flex-col">
-        <div className="p-6">
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <LayoutDashboard className="w-6 h-6 text-accent" />
-            YKB Admin
+        <div className="p-6 flex flex-col items-center border-b border-white/10">
+          <img src="/logo.png" alt="YKB Logo" className="h-24 mb-2 bg-white rounded-lg p-1" />
+          <h1 className="text-xl font-bold">
+            Admin Panel
           </h1>
         </div>
         <nav className="flex-1 px-4 space-y-2">
