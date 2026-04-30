@@ -26,15 +26,39 @@ export default function BookingPage() {
 
   async function fetchSlots() {
     try {
-      const { data, error } = await supabase
+      // Fetch slots
+      const { data: slotsData, error: slotsError } = await supabase
         .from('slots')
         .select('*')
         .eq('is_active', true)
         .gte('start_time', new Date().toISOString())
         .order('start_time', { ascending: true })
 
-      if (error) throw error
-      setSlots(data || [])
+      if (slotsError) throw slotsError
+
+      // Fetch booking counts for these slots
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('slot_id, status')
+        .in('slot_id', slotsData.map(s => s.id))
+        .or('status.eq.pending,status.eq.waiting')
+
+      if (bookingsError) throw bookingsError
+
+      // Count bookings per slot
+      const counts: Record<string, number> = {}
+      bookingsData?.forEach(b => {
+        counts[b.slot_id] = (counts[b.slot_id] || 0) + 1
+      })
+
+      // Combine and filter
+      const availableSlots = slotsData.map(slot => ({
+        ...slot,
+        current_bookings: counts[slot.id] || 0,
+        is_full: (counts[slot.id] || 0) >= slot.max_capacity
+      }))
+
+      setSlots(availableSlots)
     } catch (err: any) {
       console.error('Error fetching slots:', err.message)
     } finally {
@@ -57,7 +81,8 @@ export default function BookingPage() {
             slot_id: selectedSlot,
             name: formData.name,
             phone: formData.phone,
-            license_plate: formData.licensePlate
+            license_plate: formData.licensePlate,
+            status: 'waiting'
           }
         ])
 
@@ -173,11 +198,14 @@ export default function BookingPage() {
                     <button
                       key={slot.id}
                       type="button"
+                      disabled={slot.is_full}
                       onClick={() => setSelectedSlot(slot.id)}
-                      className={`p-4 text-left border rounded-lg transition-all ${
-                        selectedSlot === slot.id
-                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                          : 'border-gray-200 hover:border-accent hover:bg-gray-50'
+                      className={`p-4 text-left border rounded-lg transition-all relative ${
+                        slot.is_full
+                          ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+                          : selectedSlot === slot.id
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                            : 'border-gray-200 hover:border-accent hover:bg-gray-50'
                       }`}
                     >
                       <div className="font-semibold text-gray-900">
@@ -186,6 +214,11 @@ export default function BookingPage() {
                       <div className="text-sm text-gray-600">
                         {format(new Date(slot.start_time), 'h:mm a')} - {format(new Date(slot.end_time), 'h:mm a')}
                       </div>
+                      {slot.is_full && (
+                        <div className="absolute top-2 right-2 px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded uppercase">
+                          Full
+                        </div>
+                      )}
                     </button>
                   ))}
                 </div>

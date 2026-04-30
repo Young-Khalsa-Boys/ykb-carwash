@@ -13,7 +13,10 @@ import {
   XCircle,
   LayoutDashboard,
   Settings,
-  LogOut
+  LogOut,
+  ChevronDown,
+  ChevronRight,
+  Edit2
 } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -31,13 +34,29 @@ export default function AdminDashboard() {
     date: '',
     startTime: '',
     endTime: '',
-    capacity: 1
+    capacity: 5
   })
+
+  const [editingSlot, setEditingSlot] = useState<any>(null)
+  const [showCompleted, setShowCompleted] = useState(false)
 
   const supabase = createClient()
 
   useEffect(() => {
     async function checkAuth() {
+      // First check localStorage for a saved password
+      const savedPassword = localStorage.getItem('ykb_admin_password')
+      
+      if (savedPassword) {
+        setPassword(savedPassword)
+        // Attempt login with saved password
+        const success = await attemptLogin(savedPassword)
+        if (success) {
+          setLoading(false)
+          return
+        }
+      }
+
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         setIsAuthenticated(true)
@@ -49,39 +68,66 @@ export default function AdminDashboard() {
     checkAuth()
   }, [])
 
-  async function handleLogin(e: React.FormEvent) {
-    e.preventDefault()
+  useEffect(() => {
+    if (!isAuthenticated) return
+
+    // Subscribe to bookings and slots changes
+    const bookingsChannel = supabase
+      .channel('admin_realtime')
+      .on('postgres_changes', { event: '*', table: 'bookings' }, () => {
+        fetchData()
+      })
+      .on('postgres_changes', { event: '*', table: 'slots' }, () => {
+        fetchData()
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(bookingsChannel)
+    }
+  }, [isAuthenticated])
+
+  async function attemptLogin(pass: string) {
     setVerifying(true)
     setAuthError('')
 
     try {
       const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-admin', {
-        body: { password }
+        body: { password: pass }
       })
 
       if (verifyError || !verifyData.success) {
         throw new Error(verifyData?.message || 'Authentication failed')
       }
 
-      // Now sign in with the admin credentials returned from the edge function
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: verifyData.email,
-        password: password
+        password: pass
       })
 
       if (signInError) throw signInError
 
       setIsAuthenticated(true)
+      localStorage.setItem('ykb_admin_password', pass)
       fetchData()
+      return true
     } catch (err: any) {
       setAuthError(err.message)
+      localStorage.removeItem('ykb_admin_password')
+      return false
     } finally {
       setVerifying(false)
     }
   }
 
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault()
+    await attemptLogin(password)
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut()
+    localStorage.removeItem('ykb_admin_password')
     setIsAuthenticated(false)
   }
 
@@ -91,7 +137,7 @@ export default function AdminDashboard() {
       const { data: bData } = await supabase
         .from('bookings')
         .select('*, slots(*)')
-        .order('created_at', { ascending: false })
+        .order('created_at', { ascending: true })
       
       const { data: sData } = await supabase
         .from('slots')
@@ -106,6 +152,19 @@ export default function AdminDashboard() {
       setLoading(false)
     }
   }
+
+  const getBookingsBySlot = () => {
+    const grouped: Record<string, any[]> = {}
+    bookings.filter(b => b.status === 'pending' || b.status === 'waiting').forEach(b => {
+      const slotId = b.slot_id
+      if (!grouped[slotId]) grouped[slotId] = []
+      grouped[slotId].push(b)
+    })
+    return grouped
+  }
+
+  const completedBookings = bookings.filter(b => b.status === 'completed')
+  const bookingsBySlot = getBookingsBySlot()
 
   if (loading && !isAuthenticated) {
     return (
@@ -185,7 +244,36 @@ export default function AdminDashboard() {
     }
   }
 
+  async function updateSlot(e: React.FormEvent) {
+    e.preventDefault()
+    const start = new Date(`${editingSlot.date}T${editingSlot.startTime}`)
+    const end = new Date(`${editingSlot.date}T${editingSlot.endTime}`)
+
+    try {
+      const { error } = await supabase
+        .from('slots')
+        .update({
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+          max_capacity: editingSlot.capacity,
+        })
+        .eq('id', editingSlot.id)
+      
+      if (error) throw error
+      fetchData()
+      setEditingSlot(null)
+    } catch (err) {
+      alert('Error updating slot')
+    }
+  }
+
   async function updateBookingStatus(id: string, status: string) {
+    const confirmMsg = status === 'completed' 
+      ? 'Mark this booking as completed?' 
+      : `Change status to ${status}?`
+    
+    if (!confirm(confirmMsg)) return
+
     try {
       await supabase.from('bookings').update({ status }).eq('id', id)
       fetchData()
@@ -233,7 +321,7 @@ export default function AdminDashboard() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        <header className="bg-white border-b border-gray-200 p-6 flex justify-between items-center">
+        <header className="bg-white border-b border-gray-200 p-6 flex justify-between items-center sticky top-0 z-10">
           <h2 className="text-2xl font-bold text-gray-800 capitalize">{activeTab}</h2>
           <div className="text-sm text-gray-500">
             Welcome back, Admin
@@ -242,82 +330,132 @@ export default function AdminDashboard() {
 
         <main className="p-8">
           {activeTab === 'bookings' ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-              <table className="w-full text-left">
-                <thead className="bg-gray-50 text-gray-600 text-sm font-semibold border-b border-gray-200">
-                  <tr>
-                    <th className="px-6 py-4">Customer</th>
-                    <th className="px-6 py-4">Vehicle</th>
-                    <th className="px-6 py-4">Time Slot</th>
-                    <th className="px-6 py-4">Status</th>
-                    <th className="px-6 py-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  {bookings.map((booking) => (
-                    <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-gray-900">{booking.name}</div>
-                        <div className="text-sm text-gray-500">{booking.phone}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">{booking.license_plate}</span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900">
-                          {booking.slots ? format(new Date(booking.slots.start_time), 'MMM d, h:mm a') : 'N/A'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                          booking.status === 'completed' ? 'bg-green-100 text-green-700' : 
-                          booking.status === 'cancelled' ? 'bg-red-100 text-red-700' : 
-                          'bg-yellow-100 text-yellow-700'
-                        }`}>
-                          {booking.status}
+            <div className="space-y-8">
+              {/* Waiting Bookings Grouped by Slot */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2">
+                  <Clock className="w-5 h-5 text-primary" />
+                  Active Queue (Waiting)
+                </h3>
+                
+                {slots.filter(s => bookingsBySlot[s.id]?.length > 0).map(slot => (
+                  <div key={slot.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-gray-900">
+                          {format(new Date(slot.start_time), 'EEEE, MMM d')}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 space-x-2">
-                        <button 
-                          onClick={() => updateBookingStatus(booking.id, 'completed')}
-                          className="text-green-600 hover:text-green-800 p-1" title="Complete"
-                        >
-                          <CheckCircle className="w-5 h-5" />
-                        </button>
-                        <button 
-                          onClick={() => updateBookingStatus(booking.id, 'cancelled')}
-                          className="text-red-600 hover:text-red-800 p-1" title="Cancel"
-                        >
-                          <XCircle className="w-5 h-5" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {bookings.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-6 py-10 text-center text-gray-500">No bookings found</td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                        <span className="text-gray-500">
+                          {format(new Date(slot.start_time), 'h:mm a')} - {format(new Date(slot.end_time), 'h:mm a')}
+                        </span>
+                      </div>
+                      <span className="text-sm font-semibold px-3 py-1 bg-primary/10 text-primary rounded-full">
+                        {bookingsBySlot[slot.id].length} / {slot.max_capacity} Registered
+                      </span>
+                    </div>
+                    <table className="w-full text-left">
+                      <tbody className="divide-y divide-gray-200">
+                        {bookingsBySlot[slot.id].map((booking) => (
+                          <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="font-semibold text-gray-900">{booking.name}</div>
+                              <div className="text-sm text-gray-500">{booking.phone}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">{booking.license_plate}</span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="text-xs text-gray-400">Signed up: {format(new Date(booking.created_at), 'h:mm a')}</span>
+                            </td>
+                            <td className="px-6 py-4 text-right">
+                              <button 
+                                onClick={() => updateBookingStatus(booking.id, 'completed')}
+                                className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-lg font-semibold hover:bg-green-100 transition-colors"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                Complete
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ))}
+
+                {Object.keys(bookingsBySlot).length === 0 && (
+                  <div className="bg-white p-12 text-center rounded-xl border border-dashed border-gray-300 text-gray-500">
+                    No waiting bookings at the moment.
+                  </div>
+                )}
+              </div>
+
+              {/* Completed Bookings Collapsible */}
+              <div className="mt-12">
+                <button 
+                  onClick={() => setShowCompleted(!showCompleted)}
+                  className="flex items-center gap-2 text-gray-500 hover:text-gray-700 font-semibold transition-colors"
+                >
+                  {showCompleted ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                  Completed Bookings ({completedBookings.length})
+                </button>
+                
+                {showCompleted && (
+                  <div className="mt-4 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden opacity-80">
+                    <table className="w-full text-left">
+                      <thead className="bg-gray-50 text-gray-600 text-xs font-semibold border-b border-gray-200">
+                        <tr>
+                          <th className="px-6 py-3">Customer</th>
+                          <th className="px-6 py-3">Vehicle</th>
+                          <th className="px-6 py-3">Slot</th>
+                          <th className="px-6 py-3 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {completedBookings.map((booking) => (
+                          <tr key={booking.id}>
+                            <td className="px-6 py-3 text-sm">
+                              <div className="font-medium text-gray-900">{booking.name}</div>
+                            </td>
+                            <td className="px-6 py-3 text-sm">
+                              <span className="font-mono text-gray-500">{booking.license_plate}</span>
+                            </td>
+                            <td className="px-6 py-3 text-sm text-gray-500">
+                              {booking.slots ? format(new Date(booking.slots.start_time), 'MMM d, h:mm a') : 'N/A'}
+                            </td>
+                            <td className="px-6 py-3 text-right">
+                              <span className="text-green-600 text-xs font-bold uppercase tracking-wider flex items-center justify-end gap-1">
+                                <CheckCircle className="w-3 h-3" />
+                                Completed
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <div className="space-y-8">
-              {/* Add Slot Form */}
+              {/* Add/Edit Slot Form */}
               <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                 <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-accent" />
-                  Add New Time Slot
+                  {editingSlot ? <Edit2 className="w-5 h-5 text-accent" /> : <Plus className="w-5 h-5 text-accent" />}
+                  {editingSlot ? 'Edit Time Slot' : 'Add New Time Slot'}
                 </h3>
-                <form onSubmit={addSlot} className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <form onSubmit={editingSlot ? updateSlot : addSlot} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                   <div className="space-y-1">
                     <label className="text-xs font-semibold text-gray-500">Date</label>
                     <input 
                       required 
                       type="date" 
-                      value={newSlot.date}
-                      onChange={(e) => setNewSlot({...newSlot, date: e.target.value})}
-                      className="w-full px-3 py-2 border rounded-md" 
+                      value={editingSlot ? editingSlot.date : newSlot.date}
+                      onChange={(e) => editingSlot 
+                        ? setEditingSlot({...editingSlot, date: e.target.value})
+                        : setNewSlot({...newSlot, date: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary outline-none" 
                     />
                   </div>
                   <div className="space-y-1">
@@ -325,9 +463,11 @@ export default function AdminDashboard() {
                     <input 
                       required 
                       type="time" 
-                      value={newSlot.startTime}
-                      onChange={(e) => setNewSlot({...newSlot, startTime: e.target.value})}
-                      className="w-full px-3 py-2 border rounded-md" 
+                      value={editingSlot ? editingSlot.startTime : newSlot.startTime}
+                      onChange={(e) => editingSlot
+                        ? setEditingSlot({...editingSlot, startTime: e.target.value})
+                        : setNewSlot({...newSlot, startTime: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary outline-none" 
                     />
                   </div>
                   <div className="space-y-1">
@@ -335,36 +475,103 @@ export default function AdminDashboard() {
                     <input 
                       required 
                       type="time" 
-                      value={newSlot.endTime}
-                      onChange={(e) => setNewSlot({...newSlot, endTime: e.target.value})}
-                      className="w-full px-3 py-2 border rounded-md" 
+                      value={editingSlot ? editingSlot.endTime : newSlot.endTime}
+                      onChange={(e) => editingSlot
+                        ? setEditingSlot({...editingSlot, endTime: e.target.value})
+                        : setNewSlot({...newSlot, endTime: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary outline-none" 
                     />
                   </div>
-                  <button className="bg-primary text-white py-2 rounded-md font-bold hover:bg-opacity-90">
-                    Create Slot
-                  </button>
+                  <div className="space-y-1">
+                    <label className="text-xs font-semibold text-gray-500">Max Capacity</label>
+                    <input 
+                      required 
+                      type="number" 
+                      min="1"
+                      value={editingSlot ? editingSlot.capacity : newSlot.capacity}
+                      onChange={(e) => editingSlot
+                        ? setEditingSlot({...editingSlot, capacity: parseInt(e.target.value)})
+                        : setNewSlot({...newSlot, capacity: parseInt(e.target.value)})}
+                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary outline-none" 
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <button className="flex-1 bg-primary text-white py-2 rounded-md font-bold hover:bg-opacity-90 transition-all shadow-sm">
+                      {editingSlot ? 'Update Slot' : 'Create Slot'}
+                    </button>
+                    {editingSlot && (
+                      <button 
+                        type="button"
+                        onClick={() => setEditingSlot(null)}
+                        className="px-4 py-2 border border-gray-300 rounded-md font-semibold text-gray-600 hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 </form>
               </div>
 
               {/* Slots List */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {slots.map((slot) => (
-                  <div key={slot.id} className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 flex justify-between items-center">
-                    <div>
-                      <div className="font-bold text-gray-900">{format(new Date(slot.start_time), 'EEEE, MMM d')}</div>
-                      <div className="text-sm text-gray-500 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {format(new Date(slot.start_time), 'h:mm a')} - {format(new Date(slot.end_time), 'h:mm a')}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {slots.map((slot) => {
+                  const regCount = bookings.filter(b => b.slot_id === slot.id && (b.status === 'pending' || b.status === 'waiting')).length
+                  return (
+                    <div key={slot.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 group hover:border-primary/50 transition-all">
+                      <div className="flex justify-between items-start mb-4">
+                        <div>
+                          <div className="font-bold text-xl text-gray-900">{format(new Date(slot.start_time), 'EEEE')}</div>
+                          <div className="text-gray-500 font-medium">{format(new Date(slot.start_time), 'MMM d, yyyy')}</div>
+                        </div>
+                        <div className="flex gap-1">
+                          <button 
+                            onClick={() => {
+                              const startDate = new Date(slot.start_time)
+                              const endDate = new Date(slot.end_time)
+                              setEditingSlot({
+                                id: slot.id,
+                                date: format(startDate, 'yyyy-MM-dd'),
+                                startTime: format(startDate, 'HH:mm'),
+                                endTime: format(endDate, 'HH:mm'),
+                                capacity: slot.max_capacity
+                              })
+                              setActiveTab('slots') // Just in case
+                              window.scrollTo({ top: 0, behavior: 'smooth' })
+                            }}
+                            className="text-gray-400 hover:text-primary p-2 rounded-lg hover:bg-primary/5 transition-colors"
+                            title="Edit Slot"
+                          >
+                            <Edit2 className="w-5 h-5" />
+                          </button>
+                          <button 
+                            onClick={() => deleteSlot(slot.id)}
+                            className="text-gray-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                            title="Delete Slot"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-gray-700">
+                          <Clock className="w-4 h-4 text-accent" />
+                          <span className="font-semibold">{format(new Date(slot.start_time), 'h:mm a')} - {format(new Date(slot.end_time), 'h:mm a')}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="w-4 h-4 text-accent" />
+                          <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
+                            <div 
+                              className={`h-full rounded-full transition-all ${regCount >= slot.max_capacity ? 'bg-red-500' : 'bg-primary'}`}
+                              style={{ width: `${Math.min(100, (regCount / slot.max_capacity) * 100)}%` }}
+                            />
+                          </div>
+                          <span className="text-sm font-bold text-gray-600">{regCount}/{slot.max_capacity}</span>
+                        </div>
                       </div>
                     </div>
-                    <button 
-                      onClick={() => deleteSlot(slot.id)}
-                      className="text-gray-400 hover:text-red-600 p-2"
-                    >
-                      <Trash2 className="w-5 h-5" />
-                    </button>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           )}
