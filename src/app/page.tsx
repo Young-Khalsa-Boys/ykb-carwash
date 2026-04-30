@@ -43,6 +43,17 @@ export default function BookingPage() {
     }
   }, [])
 
+  const formatPhone = (value: string) => {
+    const numbers = value.replace(/\D/g, '').slice(0, 10)
+    if (numbers.length <= 3) return numbers
+    if (numbers.length <= 6) return `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`
+    return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6)}`
+  }
+
+  const validateLicensePlate = (value: string) => {
+    return /^[a-zA-Z0-9]{2,8}$/.test(value)
+  }
+
   async function fetchSlots() {
     try {
       // Fetch slots
@@ -92,6 +103,17 @@ export default function BookingPage() {
     e.preventDefault()
     if (!selectedSlot) return
 
+    // Validation
+    if (formData.phone.replace(/\D/g, '').length !== 10) {
+      setError('Please enter a valid 10-digit phone number.')
+      return
+    }
+
+    if (!validateLicensePlate(formData.licensePlate)) {
+      setError('License plate must be 2-8 alphanumeric characters.')
+      return
+    }
+
     setSubmitting(true)
     setError(null)
 
@@ -102,8 +124,8 @@ export default function BookingPage() {
           {
             slot_id: selectedSlot,
             name: formData.name,
-            phone: formData.phone,
-            license_plate: formData.licensePlate,
+            phone: formData.phone.replace(/\D/g, ''), // Store raw number
+            license_plate: formData.licensePlate.toUpperCase(),
             status: 'waiting'
           }
         ])
@@ -174,7 +196,7 @@ export default function BookingPage() {
                     type="tel"
                     placeholder="(555) 000-0000"
                     value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, phone: formatPhone(e.target.value) })}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                   />
                 </div>
@@ -192,9 +214,10 @@ export default function BookingPage() {
                 <input
                   required
                   type="text"
-                  placeholder="ABC-1234"
+                  placeholder="ABC1234"
+                  maxLength={8}
                   value={formData.licensePlate}
-                  onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value.replace(/[^a-zA-Z0-9]/g, '') })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                 />
               </div>

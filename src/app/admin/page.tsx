@@ -153,6 +153,15 @@ export default function AdminDashboard() {
     }
   }
 
+  const formatPhone = (phone: string) => {
+    if (!phone) return 'N/A'
+    const cleaned = phone.replace(/\D/g, '')
+    if (cleaned.length === 10) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`
+    }
+    return phone
+  }
+
   const getBookingsBySlot = () => {
     const grouped: Record<string, any[]> = {}
     bookings.filter(b => b.status !== 'cancelled').forEach(b => {
@@ -373,7 +382,7 @@ export default function AdminDashboard() {
                             <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-6 py-4">
                                 <div className="font-semibold text-gray-900">{booking.name}</div>
-                                <div className="text-sm text-gray-500">{booking.phone}</div>
+                                <div className="text-sm text-gray-500">{formatPhone(booking.phone)}</div>
                               </td>
                               <td className="px-6 py-4">
                                 <span className="px-2 py-1 bg-gray-100 rounded text-sm font-mono">{booking.license_plate}</span>
