@@ -62,30 +62,30 @@ export default function BookingPage() {
         .from('slots')
         .select('*')
         .eq('is_active', true)
-        .gte('start_time', now) // Still filter by start_time >= now
+        .gte('start_time', now)
         .order('start_time', { ascending: true })
 
-      if (slotsError) throw slotsError
+      if (slotsError || !slotsData) throw slotsError || new Error('No slots found')
 
       // Fetch booking counts for these slots (include completed)
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
         .select('slot_id, status')
-        .in('slot_id', slotsData.map(s => s.id))
+        .in('slot_id', (slotsData as any[]).map((s: any) => s.id))
         .neq('status', 'cancelled')
 
       if (bookingsError) throw bookingsError
 
       // Count bookings per slot
       const counts: Record<string, number> = {}
-      bookingsData?.forEach(b => {
+      (bookingsData as any[])?.forEach((b: any) => {
         counts[b.slot_id] = (counts[b.slot_id] || 0) + 1
       })
 
       // Combine and filter
-      const availableSlots = slotsData
-        .filter(slot => new Date(slot.start_time) > new Date()) // Extra client-side filter for precision
-        .map(slot => ({
+      const availableSlots = (slotsData as any[])
+        .filter((slot: any) => new Date(slot.start_time) > new Date()) // Extra client-side filter for precision
+        .map((slot: any) => ({
           ...slot,
           current_bookings: counts[slot.id] || 0,
           is_full: (counts[slot.id] || 0) >= slot.max_capacity

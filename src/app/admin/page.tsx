@@ -165,7 +165,7 @@ export default function AdminDashboard() {
 
   const getBookingsBySlot = () => {
     const grouped: Record<string, any[]> = {}
-    bookings.filter(b => b.status !== 'cancelled').forEach(b => {
+    bookings.filter((b: any) => b.status !== 'cancelled').forEach((b: any) => {
       const slotId = b.slot_id
       if (!grouped[slotId]) grouped[slotId] = []
       grouped[slotId].push(b)
@@ -173,12 +173,12 @@ export default function AdminDashboard() {
     return grouped
   }
 
-  const completedBookings = bookings.filter(b => b.status === 'completed')
-  const waitingBookings = bookings.filter(b => b.status === 'pending' || b.status === 'waiting')
+  const completedBookings = bookings.filter((b: any) => b.status === 'completed')
+  const waitingBookings = bookings.filter((b: any) => b.status === 'pending' || b.status === 'waiting')
   
   const getWaitingBookingsBySlot = () => {
     const grouped: Record<string, any[]> = {}
-    waitingBookings.forEach(b => {
+    waitingBookings.forEach((b: any) => {
       const slotId = b.slot_id
       if (!grouped[slotId]) grouped[slotId] = []
       grouped[slotId].push(b)
@@ -362,8 +362,8 @@ export default function AdminDashboard() {
                   Active Queue (Waiting)
                 </h3>
                 
-                {slots.filter(s => bookingsBySlot[s.id]?.length > 0).map(slot => {
-                  const totalRegCount = bookings.filter(b => b.slot_id === slot.id && b.status !== 'cancelled').length
+                {slots.filter((s: any) => bookingsBySlot[s.id]?.length > 0).map((slot: any) => {
+                  const totalRegCount = bookings.filter((b: any) => b.slot_id === slot.id && b.status !== 'cancelled').length
                   return (
                     <div key={slot.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                       <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
@@ -381,7 +381,7 @@ export default function AdminDashboard() {
                       </div>
                       <table className="w-full text-left">
                         <tbody className="divide-y divide-gray-200">
-                          {bookingsBySlot[slot.id].map((booking) => (
+                          {bookingsBySlot[slot.id].map((booking: any) => (
                             <tr key={booking.id} className="hover:bg-gray-50 transition-colors">
                               <td className="px-6 py-4">
                                 <div className="font-semibold text-gray-900">{booking.name}</div>
@@ -439,7 +439,7 @@ export default function AdminDashboard() {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {completedBookings.map((booking) => (
+                        {completedBookings.map((booking: any) => (
                           <tr key={booking.id}>
                             <td className="px-6 py-3 text-sm">
                               <div className="font-medium text-gray-900">{booking.name}</div>
@@ -548,8 +548,8 @@ export default function AdminDashboard() {
 
               {/* Slots List */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {slots.map((slot) => {
-                  const regCount = bookings.filter(b => b.slot_id === slot.id && b.status !== 'cancelled').length
+                {slots.map((slot: any) => {
+                  const regCount = bookings.filter((b: any) => b.slot_id === slot.id && b.status !== 'cancelled').length
                   return (
                     <div key={slot.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 group hover:border-primary/50 transition-all">
                       <div className="flex justify-between items-start mb-4">
