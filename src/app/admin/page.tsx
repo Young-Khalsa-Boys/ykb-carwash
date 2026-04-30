@@ -16,7 +16,8 @@ import {
   LogOut,
   ChevronDown,
   ChevronRight,
-  Edit2
+  Edit2,
+  RotateCcw
 } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -291,7 +292,9 @@ export default function AdminDashboard() {
   async function updateBookingStatus(id: string, status: string) {
     const confirmMsg = status === 'completed' 
       ? 'Mark this booking as completed?' 
-      : `Change status to ${status}?`
+      : status === 'waiting'
+        ? 'Move this booking back to the active queue?'
+        : `Change status to ${status}?`
     
     if (!confirm(confirmMsg)) return
 
@@ -447,11 +450,18 @@ export default function AdminDashboard() {
                             <td className="px-6 py-3 text-sm text-gray-500">
                               {booking.slots ? format(new Date(booking.slots.start_time), 'MMM d, h:mm a') : 'N/A'}
                             </td>
-                            <td className="px-6 py-3 text-right">
-                              <span className="text-green-600 text-xs font-bold uppercase tracking-wider flex items-center justify-end gap-1">
+                            <td className="px-6 py-3 text-right flex items-center justify-end gap-3">
+                              <span className="text-green-600 text-xs font-bold uppercase tracking-wider flex items-center gap-1">
                                 <CheckCircle className="w-3 h-3" />
                                 Completed
                               </span>
+                              <button 
+                                onClick={() => updateBookingStatus(booking.id, 'waiting')}
+                                className="p-1 text-gray-400 hover:text-primary transition-colors"
+                                title="Undo / Re-queue"
+                              >
+                                <RotateCcw className="w-4 h-4" />
+                              </button>
                             </td>
                           </tr>
                         ))}
