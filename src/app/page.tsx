@@ -145,9 +145,23 @@ export default function BookingPage() {
         <div className="bg-white p-8 rounded-lg shadow-sm border border-gray-100 max-w-md w-full text-center">
           <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-primary mb-2">Booking Confirmed!</h1>
-          <p className="text-gray-600 mb-6">
-            We've received your booking. We'll see you at your selected time!
-          </p>
+          <div className="space-y-4 mb-6">
+            <p className="text-gray-600">
+              We'll text you when your car is ready to be washed!
+            </p>
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 flex items-center justify-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-primary" />
+              <p className="text-sm text-primary font-medium">Your parking spot is reserved</p>
+            </div>
+            <a 
+              href="https://youngkhalsaboys.com/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="block text-accent hover:underline text-sm font-semibold"
+            >
+              Understand our mission →
+            </a>
+          </div>
           <button
             onClick={() => window.location.reload()}
             className="w-full bg-primary text-white py-3 rounded-md font-semibold hover:bg-opacity-90 transition-all"
@@ -166,7 +180,15 @@ export default function BookingPage() {
         <div className="text-center mb-10">
           <img src="/logo.png" alt="YKB Logo" className="h-32 mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-primary mb-2">Car Wash Booking</h1>
-          <p className="text-gray-600 italic">Fast, Reliable, and Community-Driven</p>
+          <p className="text-gray-600 italic mb-2">Fast, Reliable, and Community-Driven</p>
+          <a 
+            href="https://youngkhalsaboys.com/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-accent hover:underline text-sm font-medium"
+          >
+            Understand our mission
+          </a>
           <div className="h-1 w-20 bg-accent mx-auto mt-4 rounded-full"></div>
         </div>
 
@@ -221,6 +243,10 @@ export default function BookingPage() {
                   onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none uppercase"
                 />
+                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-green-500" />
+                  Parking spot reserved during wash
+                </p>
               </div>
             </div>
 
