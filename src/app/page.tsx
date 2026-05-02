@@ -151,16 +151,8 @@ export default function BookingPage() {
             </p>
             <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 flex items-center justify-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-primary" />
-              <p className="text-sm text-primary font-medium">Your parking spot is reserved</p>
+              <p className="text-sm text-primary font-medium">Your parking spot will be reserved</p>
             </div>
-            <a 
-              href="https://youngkhalsaboys.com/" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="block text-accent hover:underline text-sm font-semibold"
-            >
-              Understand our mission →
-            </a>
           </div>
           <button
             onClick={() => window.location.reload()}
@@ -180,15 +172,7 @@ export default function BookingPage() {
         <div className="text-center mb-10">
           <img src="/logo.png" alt="YKB Logo" className="h-32 mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-primary mb-2">Car Wash Booking</h1>
-          <p className="text-gray-600 italic mb-2">Fast, Reliable, and Community-Driven</p>
-          <a 
-            href="https://youngkhalsaboys.com/" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-accent hover:underline text-sm font-medium"
-          >
-            Understand our mission
-          </a>
+          <p className="text-gray-600 italic">Fast, Reliable, and Community-Driven</p>
           <div className="h-1 w-20 bg-accent mx-auto mt-4 rounded-full"></div>
         </div>
 
@@ -245,7 +229,7 @@ export default function BookingPage() {
                 />
                 <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
                   <CheckCircle2 className="w-3 h-3 text-green-500" />
-                  Parking spot reserved during wash
+                  Parking spot will be reserved during wash
                 </p>
               </div>
             </div>
@@ -317,9 +301,19 @@ export default function BookingPage() {
           </div>
         </form>
 
-        <p className="text-center mt-8 text-gray-500 text-sm">
-          &copy; {new Date().getFullYear()} Young Khalsa Boys. All rights reserved.
-        </p>
+        <div className="text-center mt-8 space-y-2">
+          <p className="text-gray-500 text-sm">
+            &copy; {new Date().getFullYear()} Young Khalsa Boys. All rights reserved.
+          </p>
+          <a 
+            href="https://youngkhalsaboys.com/" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-accent hover:underline text-xs font-medium"
+          >
+            Understand our mission
+          </a>
+        </div>
       </div>
     </div>
   )
