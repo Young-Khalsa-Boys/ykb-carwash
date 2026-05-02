@@ -17,7 +17,8 @@ import {
   ChevronDown,
   ChevronRight,
   Edit2,
-  RotateCcw
+  RotateCcw,
+  Play
 } from 'lucide-react'
 
 export default function AdminDashboard() {
@@ -173,6 +174,7 @@ export default function AdminDashboard() {
     return grouped
   }
 
+  const inProgressBookings = bookings.filter((b: any) => b.status === 'in_progress')
   const completedBookings = bookings.filter((b: any) => b.status === 'completed')
   const waitingBookings = bookings.filter((b: any) => b.status === 'pending' || b.status === 'waiting')
   
@@ -292,11 +294,13 @@ export default function AdminDashboard() {
   async function updateBookingStatus(id: string, status: string) {
     const confirmMsg = status === 'completed' 
       ? 'Mark this booking as completed?' 
-      : status === 'cancelled'
-        ? 'Are you sure you want to unbook this customer? This will remove them from the slot.'
-        : status === 'waiting'
-          ? 'Move this booking back to the active queue?'
-          : `Change status to ${status}?`
+      : status === 'in_progress'
+        ? 'Start washing this car?'
+        : status === 'cancelled'
+          ? 'Are you sure you want to unbook this customer? This will remove them from the slot.'
+          : status === 'waiting'
+            ? 'Move this booking back to the active queue?'
+            : `Change status to ${status}?`
     
     if (!confirm(confirmMsg)) return
 
@@ -357,6 +361,59 @@ export default function AdminDashboard() {
         <main className="p-8">
           {activeTab === 'bookings' ? (
             <div className="space-y-8">
+              {/* In Progress Bookings */}
+              <div className="space-y-6">
+                <h3 className="text-lg font-bold text-blue-700 flex items-center gap-2">
+                  <Play className="w-5 h-5" />
+                  Currently In Progress
+                </h3>
+                
+                {inProgressBookings.length > 0 ? (
+                  <div className="bg-blue-50/30 rounded-xl shadow-sm border border-blue-100 overflow-hidden">
+                    <table className="w-full text-left">
+                      <tbody className="divide-y divide-blue-100">
+                        {inProgressBookings.map((booking: any) => (
+                          <tr key={booking.id} className="hover:bg-blue-50/50 transition-colors">
+                            <td className="px-6 py-4">
+                              <div className="font-semibold text-gray-900">{booking.name}</div>
+                              <div className="text-sm text-gray-500">{formatPhone(booking.phone)}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              <span className="px-2 py-1 bg-white border border-blue-200 rounded text-sm font-mono text-blue-700">{booking.license_plate}</span>
+                            </td>
+                            <td className="px-6 py-4">
+                              <div className="text-xs text-gray-400">
+                                {booking.slots ? format(new Date(booking.slots.start_time), 'MMM d, h:mm a') : 'N/A'}
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
+                              <button 
+                                onClick={() => updateBookingStatus(booking.id, 'completed')}
+                                className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-sm"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                                Complete
+                              </button>
+                              <button 
+                                onClick={() => updateBookingStatus(booking.id, 'waiting')}
+                                className="p-2 text-gray-400 hover:text-primary transition-colors"
+                                title="Move back to queue"
+                              >
+                                <RotateCcw className="w-5 h-5" />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="bg-white p-6 text-center rounded-xl border border-dashed border-gray-200 text-gray-400 text-sm">
+                    No cars currently in progress.
+                  </div>
+                )}
+              </div>
+
               {/* Waiting Bookings Grouped by Slot */}
               <div className="space-y-6">
                 <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2">
@@ -397,11 +454,11 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
                                 <button 
-                                  onClick={() => updateBookingStatus(booking.id, 'completed')}
-                                  className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-lg font-semibold hover:bg-green-100 transition-colors"
+                                  onClick={() => updateBookingStatus(booking.id, 'in_progress')}
+                                  className="inline-flex items-center gap-2 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-semibold hover:bg-blue-100 transition-colors"
                                 >
-                                  <CheckCircle className="w-4 h-4" />
-                                  Complete
+                                  <Play className="w-4 h-4" />
+                                  Start Wash
                                 </button>
                                 <button 
                                   onClick={() => updateBookingStatus(booking.id, 'cancelled')}

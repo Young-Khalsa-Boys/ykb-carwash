@@ -15,7 +15,7 @@ CREATE TABLE bookings (
   name TEXT NOT NULL,
   phone TEXT NOT NULL,
   license_plate TEXT NOT NULL,
-  status TEXT DEFAULT 'pending', -- pending, completed, cancelled
+  status TEXT DEFAULT 'pending', -- pending, waiting, in_progress, completed, cancelled
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
