@@ -292,9 +292,11 @@ export default function AdminDashboard() {
   async function updateBookingStatus(id: string, status: string) {
     const confirmMsg = status === 'completed' 
       ? 'Mark this booking as completed?' 
-      : status === 'waiting'
-        ? 'Move this booking back to the active queue?'
-        : `Change status to ${status}?`
+      : status === 'cancelled'
+        ? 'Are you sure you want to unbook this customer? This will remove them from the slot.'
+        : status === 'waiting'
+          ? 'Move this booking back to the active queue?'
+          : `Change status to ${status}?`
     
     if (!confirm(confirmMsg)) return
 
@@ -393,13 +395,20 @@ export default function AdminDashboard() {
                               <td className="px-6 py-4">
                                 <span className="text-xs text-gray-400">Signed up: {format(new Date(booking.created_at), 'h:mm a')}</span>
                               </td>
-                              <td className="px-6 py-4 text-right">
+                              <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
                                 <button 
                                   onClick={() => updateBookingStatus(booking.id, 'completed')}
                                   className="inline-flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-lg font-semibold hover:bg-green-100 transition-colors"
                                 >
                                   <CheckCircle className="w-4 h-4" />
                                   Complete
+                                </button>
+                                <button 
+                                  onClick={() => updateBookingStatus(booking.id, 'cancelled')}
+                                  className="p-2 text-gray-400 hover:text-red-600 transition-colors"
+                                  title="Unbook / Cancel"
+                                >
+                                  <XCircle className="w-5 h-5" />
                                 </button>
                               </td>
                             </tr>
