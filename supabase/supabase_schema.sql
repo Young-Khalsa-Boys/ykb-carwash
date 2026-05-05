@@ -14,7 +14,9 @@ CREATE TABLE bookings (
   slot_id UUID REFERENCES slots(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   phone TEXT NOT NULL,
-  license_plate TEXT NOT NULL,
+  license_plate TEXT,
+  vehicle_make_model TEXT NOT NULL,
+  vehicle_color TEXT NOT NULL,
   status TEXT DEFAULT 'pending', -- pending, waiting, in_progress, completed, cancelled
   created_at TIMESTAMPTZ DEFAULT now()
 );
