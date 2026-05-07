@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { format } from 'date-fns'
-import { Calendar, Car, Phone, User, CheckCircle2, Loader2, ScrollText, AlertTriangle } from 'lucide-react'
+import { Calendar, Car, Phone, User, CheckCircle2, Loader2, ScrollText, AlertTriangle, Play } from 'lucide-react'
 
 export default function BookingPage() {
   const [slots, setSlots] = useState<any[]>([])
