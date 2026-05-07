@@ -310,6 +310,9 @@ export default function AdminDashboard() {
   }
 
   async function toggleDonated(id: string, currentStatus: boolean) {
+    const action = currentStatus ? 'Mark as unpaid?' : 'Mark as donated?';
+    if (!confirm(action)) return;
+
     try {
       const { error } = await supabase
         .from('bookings')
