@@ -18,6 +18,7 @@ CREATE TABLE bookings (
   vehicle_make_model TEXT NOT NULL,
   vehicle_color TEXT NOT NULL,
   status TEXT DEFAULT 'pending', -- pending, waiting, in_progress, completed, cancelled
+  donated BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

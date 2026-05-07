@@ -174,16 +174,36 @@ export default function BookingPage() {
           <h1 className="text-2xl font-bold text-primary mb-2">Booking Confirmed!</h1>
           <div className="space-y-4 mb-6">
             <p className="text-gray-600">
-              We\'ll text you when your car is ready to be washed!
+              We'll text you when your car is ready to be washed!
             </p>
             <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 flex items-center justify-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-primary" />
               <p className="text-sm text-primary font-medium">Your parking spot will be reserved</p>
             </div>
           </div>
+
+          <div className="mb-8 p-6 bg-gradient-to-br from-primary to-blue-700 rounded-xl text-white shadow-md relative overflow-hidden group">
+            <div className="relative z-10">
+              <h3 className="text-xl font-bold mb-2">Skip the line? ⚡️</h3>
+              <p className="text-blue-100 text-sm mb-4">
+                Save time at the counter by donating now. Most people donate in advance!
+              </p>
+              <a 
+                href="/donate" 
+                className="inline-flex items-center gap-2 bg-white text-primary px-6 py-2.5 rounded-full font-bold hover:bg-blue-50 transition-all shadow-sm"
+              >
+                Donate Now
+                <Play className="w-3 h-3 fill-current" />
+              </a>
+            </div>
+            <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
+              <Car className="w-24 h-24 rotate-12" />
+            </div>
+          </div>
+
           <button
             onClick={() => window.location.reload()}
-            className="w-full bg-primary text-white py-3 rounded-md font-semibold hover:bg-opacity-90 transition-all"
+            className="w-full text-gray-500 py-3 rounded-md font-semibold hover:bg-gray-100 transition-all text-sm"
           >
             Make Another Booking
           </button>

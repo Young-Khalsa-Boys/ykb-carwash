@@ -309,6 +309,20 @@ export default function AdminDashboard() {
     }
   }
 
+  async function toggleDonated(id: string, currentStatus: boolean) {
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ donated: !currentStatus })
+        .eq('id', id)
+      
+      if (error) throw error
+      fetchData()
+    } catch (err) {
+      alert('Error updating donation status')
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-100 flex">
       {/* Sidebar */}
@@ -388,6 +402,7 @@ export default function AdminDashboard() {
                             <th className="px-6 py-3">Customer</th>
                             <th className="px-6 py-3">Vehicle Info</th>
                             <th className="px-6 py-3">Sign Up Time</th>
+                            <th className="px-6 py-3">Donated</th>
                             <th className="px-6 py-3 text-right">Actions</th>
                           </tr>
                         </thead>
@@ -408,6 +423,28 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-6 py-4">
                                 <span className="text-xs text-gray-400">{format(new Date(booking.created_at), 'h:mm a')}</span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <button
+                                  onClick={() => toggleDonated(booking.id, !!booking.donated)}
+                                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-tight transition-all border ${
+                                    booking.donated 
+                                      ? 'bg-green-100 text-green-700 border-green-200' 
+                                      : 'bg-gray-100 text-gray-500 border-gray-200 hover:border-gray-300'
+                                  }`}
+                                >
+                                  {booking.donated ? (
+                                    <>
+                                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                      Donated
+                                    </>
+                                  ) : (
+                                    <>
+                                      <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                                      Not Paid
+                                    </>
+                                  )}
+                                </button>
                               </td>
                               <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
                                 <button 
