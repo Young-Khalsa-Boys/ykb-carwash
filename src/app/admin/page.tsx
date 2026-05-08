@@ -18,14 +18,20 @@ import {
   ChevronRight,
   Edit2,
   RotateCcw,
-  Play
+  Play,
+  Monitor,
+  Eye,
+  EyeOff,
+  Car,
+  Phone,
+  User
 } from 'lucide-react'
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<any[]>([])
   const [slots, setSlots] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'bookings' | 'slots'>('bookings')
+  const [activeTab, setActiveTab] = useState<'bookings' | 'slots' | 'atc'>('bookings')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
@@ -41,6 +47,16 @@ export default function AdminDashboard() {
 
   const [editingSlot, setEditingSlot] = useState<any>(null)
   const [showCompleted, setShowCompleted] = useState(false)
+  const [atcForm, setAtcForm] = useState({
+    name: '',
+    phone: '',
+    licensePlate: '',
+    vehicleMakeModel: '',
+    vehicleColor: '',
+    selectedSlot: ''
+  })
+  const [atcSubmitting, setAtcSubmitting] = useState(false)
+  const [atcSuccess, setAtcSuccess] = useState(false)
 
   const supabase = createClient()
 
@@ -162,6 +178,13 @@ export default function AdminDashboard() {
       return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`
     }
     return phone
+  }
+
+  const formatPhoneInput = (value: string) => {
+    const numbers = value.replace(/\D/g, '').slice(0, 10)
+    if (numbers.length <= 3) return numbers
+    if (numbers.length <= 6) return `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`
+    return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6)}`
   }
 
   const getBookingsBySlot = () => {
@@ -290,6 +313,69 @@ export default function AdminDashboard() {
     }
   }
 
+  async function toggleSlotActive(id: string, currentStatus: boolean) {
+    const action = currentStatus ? 'Make this a FLEX slot? (It will be hidden from public signup)' : 'Make this slot public?';
+    if (!confirm(action)) return;
+
+    try {
+      const { error } = await supabase
+        .from('slots')
+        .update({ is_active: !currentStatus })
+        .eq('id', id)
+      
+      if (error) throw error
+      fetchData()
+    } catch (err) {
+      alert('Error toggling slot status')
+    }
+  }
+
+  async function handleAtcSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!atcForm.selectedSlot) {
+      alert('Please select a slot')
+      return
+    }
+
+    if (atcForm.phone.replace(/\D/g, '').length !== 10) {
+      alert('Please enter a valid 10-digit phone number.')
+      return
+    }
+
+    setAtcSubmitting(true)
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .insert([{
+          slot_id: atcForm.selectedSlot,
+          name: atcForm.name,
+          phone: atcForm.phone.replace(/\D/g, ''),
+          license_plate: atcForm.licensePlate.toUpperCase(),
+          vehicle_make_model: atcForm.vehicleMakeModel,
+          vehicle_color: atcForm.vehicleColor,
+          status: 'waiting'
+        }])
+
+      if (error) throw error
+      
+      setAtcSuccess(true)
+      setAtcForm({
+        name: '',
+        phone: '',
+        licensePlate: '',
+        vehicleMakeModel: '',
+        vehicleColor: '',
+        selectedSlot: ''
+      })
+      fetchData()
+      setTimeout(() => setAtcSuccess(false), 3000)
+    } catch (err: any) {
+      alert('Error creating ATC booking: ' + err.message)
+    } finally {
+      setAtcSubmitting(false)
+    }
+  }
+
   async function updateBookingStatus(id: string, status: string) {
     const confirmMsg = status === 'completed' 
       ? 'Mark this booking as completed?' 
@@ -351,6 +437,13 @@ export default function AdminDashboard() {
             <Calendar className="w-5 h-5" />
             Manage Slots
           </button>
+          <button 
+            onClick={() => setActiveTab('atc')}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${activeTab === 'atc' ? 'bg-white/10 text-accent font-semibold' : 'hover:bg-white/5'}`}
+          >
+            <Monitor className="w-5 h-5" />
+            ATC Registration
+          </button>
         </nav>
         <div className="p-4 border-t border-white/10">
           <button 
@@ -366,7 +459,7 @@ export default function AdminDashboard() {
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
         <header className="bg-white border-b border-gray-200 p-6 flex justify-between items-center sticky top-0 z-10">
-          <h2 className="text-2xl font-bold text-gray-800 capitalize">{activeTab}</h2>
+          <h2 className="text-2xl font-bold text-gray-800 capitalize">{activeTab === 'atc' ? 'ATC Registration' : activeTab}</h2>
           <div className="text-sm text-gray-500">
             Welcome back, Admin
           </div>
@@ -536,6 +629,167 @@ export default function AdminDashboard() {
                 )}
               </div>
             </div>
+          ) : activeTab === 'atc' ? (
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div className="bg-primary/5 px-8 py-6 border-b border-gray-200">
+                  <h3 className="text-xl font-bold text-gray-800 flex items-center gap-3">
+                    <Monitor className="w-6 h-6 text-primary" />
+                    New At-The-Counter Registration
+                  </h3>
+                  <p className="text-gray-500 text-sm mt-1">Directly register a customer into the queue. Waiver and donation steps are skipped.</p>
+                </div>
+                
+                <form onSubmit={handleAtcSubmit} className="p-8 space-y-8">
+                  {atcSuccess && (
+                    <div className="bg-green-100 border border-green-200 text-green-700 px-4 py-3 rounded-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="font-semibold">Registration successful! Customer added to queue.</span>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        Customer Info
+                      </h4>
+                      <div className="space-y-4">
+                        <div className="space-y-1">
+                          <label className="text-sm font-semibold text-gray-700">Full Name</label>
+                          <input 
+                            required
+                            type="text" 
+                            placeholder="John Doe"
+                            value={atcForm.name}
+                            onChange={(e) => setAtcForm({...atcForm, name: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-semibold text-gray-700">Phone Number</label>
+                          <input 
+                            required
+                            type="tel" 
+                            placeholder="(555) 000-0000"
+                            value={atcForm.phone}
+                            onChange={(e) => setAtcForm({...atcForm, phone: formatPhoneInput(e.target.value)})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                        <Car className="w-4 h-4" />
+                        Vehicle Details
+                      </h4>
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-1">
+                            <label className="text-sm font-semibold text-gray-700">Make/Model</label>
+                            <input 
+                              required
+                              type="text" 
+                              placeholder="Toyota Camry"
+                              value={atcForm.vehicleMakeModel}
+                              onChange={(e) => setAtcForm({...atcForm, vehicleMakeModel: e.target.value})}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-sm font-semibold text-gray-700">Color</label>
+                            <input 
+                              required
+                              type="text" 
+                              placeholder="Silver"
+                              value={atcForm.vehicleColor}
+                              onChange={(e) => setAtcForm({...atcForm, vehicleColor: e.target.value})}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-semibold text-gray-700">License Plate</label>
+                          <input 
+                            type="text" 
+                            placeholder="ABC1234"
+                            value={atcForm.licensePlate}
+                            onChange={(e) => setAtcForm({...atcForm, licensePlate: e.target.value.toUpperCase()})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none uppercase"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 pt-4 border-t border-gray-100">
+                    <h4 className="text-sm font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                      <Calendar className="w-4 h-4" />
+                      Select Assignment Slot
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {slots.map((slot: any) => {
+                        const regCount = bookings.filter((b: any) => b.slot_id === slot.id && b.status !== 'cancelled').length
+                        const isFull = regCount >= slot.max_capacity
+                        const isFlex = !slot.is_active
+                        const isSelected = atcForm.selectedSlot === slot.id
+
+                        return (
+                          <button
+                            key={slot.id}
+                            type="button"
+                            onClick={() => setAtcForm({...atcForm, selectedSlot: slot.id})}
+                            className={`p-4 text-left border rounded-xl transition-all relative ${
+                              isSelected
+                                ? 'border-primary bg-primary/5 ring-2 ring-primary ring-inset'
+                                : isFlex
+                                  ? 'border-amber-400 bg-amber-50/50 hover:bg-amber-50'
+                                  : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                            }`}
+                          >
+                            {isFlex && (
+                              <div className="absolute -top-2 left-3 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded border border-amber-200 uppercase tracking-tighter">
+                                Flex
+                              </div>
+                            )}
+                            <div className="font-bold text-gray-900 text-sm">
+                              {format(new Date(slot.start_time), 'MMM d, h:mm a')}
+                            </div>
+                            <div className="flex items-center justify-between mt-2">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isFull ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                                {regCount} / {slot.max_capacity}
+                              </span>
+                              {isSelected && <CheckCircle className="w-4 h-4 text-primary" />}
+                            </div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="pt-6">
+                    <button 
+                      disabled={atcSubmitting}
+                      className="w-full bg-primary text-white py-4 rounded-xl font-bold text-lg hover:bg-opacity-90 disabled:bg-gray-300 transition-all flex items-center justify-center gap-3 shadow-lg"
+                    >
+                      {atcSubmitting ? (
+                        <>
+                          <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          Registering...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-5 h-5" />
+                          Complete Registration
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           ) : (
             <div className="space-y-8">
               {/* Add/Edit Slot Form */}
@@ -616,13 +870,25 @@ export default function AdminDashboard() {
                 {slots.map((slot: any) => {
                   const regCount = bookings.filter((b: any) => b.slot_id === slot.id && b.status !== 'cancelled').length
                   return (
-                    <div key={slot.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 group hover:border-primary/50 transition-all">
+                    <div key={slot.id} className={`bg-white p-6 rounded-xl shadow-sm border group hover:border-primary/50 transition-all relative ${!slot.is_active ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200'}`}>
+                      {!slot.is_active && (
+                        <div className="absolute -top-2.5 right-4 px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded border border-amber-200 uppercase tracking-wider">
+                          Flex Slot
+                        </div>
+                      )}
                       <div className="flex justify-between items-start mb-4">
                         <div>
                           <div className="font-bold text-xl text-gray-900">{format(new Date(slot.start_time), 'EEEE')}</div>
                           <div className="text-gray-500 font-medium">{format(new Date(slot.start_time), 'MMM d, yyyy')}</div>
                         </div>
                         <div className="flex gap-1">
+                          <button 
+                            onClick={() => toggleSlotActive(slot.id, !!slot.is_active)}
+                            className={`p-2 rounded-lg transition-colors ${slot.is_active ? 'text-gray-400 hover:text-amber-600 hover:bg-amber-50' : 'text-amber-600 hover:text-primary hover:bg-primary/5'}`}
+                            title={slot.is_active ? "Make Flex Slot" : "Make Public"}
+                          >
+                            {slot.is_active ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+                          </button>
                           <button 
                             onClick={() => {
                               const startDate = new Date(slot.start_time)
