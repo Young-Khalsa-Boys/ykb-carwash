@@ -182,31 +182,22 @@ export default function BookingPage() {
             </div>
           </div>
 
-          <div className="mb-8 p-6 bg-orange-50 rounded-xl border border-orange-100 relative overflow-hidden group">
-            <div className="relative z-10 text-left">
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Save time at check-in ⚡️</h3>
-              <p className="text-gray-600 text-sm mb-4">
-                Most people choose to donate in advance to skip the line at the counter.
-              </p>
-              <a 
-                href="/donate" 
-                className="inline-flex items-center gap-2 bg-accent text-white px-6 py-2.5 rounded-full font-bold hover:bg-opacity-90 transition-all shadow-sm"
-              >
-                Donate Now
-                <Play className="w-3 h-3 fill-current" />
-              </a>
-            </div>
-            <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
-              <Car className="w-24 h-24 rotate-12 text-accent" />
-            </div>
-          </div>
+          <div className="flex flex-col gap-3">
+            <a
+              href="/donate"
+              className="w-full inline-flex items-center justify-center gap-2 bg-accent text-white py-4 rounded-lg font-bold hover:bg-opacity-90 transition-all shadow-sm"
+            >
+              Save time at the counter; Donate Now
+              <Play className="w-4 h-4 fill-current" />
+            </a>
 
-          <button
-            onClick={() => window.location.reload()}
-            className="w-full text-gray-500 py-3 rounded-md font-semibold hover:bg-gray-100 transition-all text-sm"
-          >
-            Make Another Booking
-          </button>
+            <button
+              onClick={() => window.location.reload()}
+              className="w-full text-gray-500 py-3 rounded-md font-semibold hover:bg-gray-100 transition-all text-sm"
+            >
+              Make Another Booking
+            </button>
+          </div>
         </div>
       </div>
     )
@@ -327,13 +318,12 @@ export default function BookingPage() {
                         type="button"
                         disabled={slot.is_full}
                         onClick={() => setSelectedSlot(slot.id)}
-                        className={`p-4 text-left border rounded-lg transition-all relative ${
-                          slot.is_full
-                            ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
-                            : selectedSlot === slot.id
-                              ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                              : 'border-gray-200 hover:border-accent hover:bg-gray-50'
-                        }`}
+                        className={`p-4 text-left border rounded-lg transition-all relative ${slot.is_full
+                          ? 'border-gray-200 bg-gray-50 cursor-not-allowed opacity-60'
+                          : selectedSlot === slot.id
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                            : 'border-gray-200 hover:border-accent hover:bg-gray-50'
+                          }`}
                       >
                         <div className="font-semibold text-gray-900">
                           {format(new Date(slot.start_time), 'EEEE, MMM d')}
@@ -373,14 +363,14 @@ export default function BookingPage() {
               </h2>
               <p className="text-gray-500 mt-1">Please read and scroll to the bottom to accept</p>
             </div>
-            
-            <div 
+
+            <div
               ref={waiverRef}
               onScroll={handleWaiverScroll}
               className="p-6 md:p-8 max-h-[400px] overflow-y-auto bg-gray-50 text-gray-700 leading-relaxed space-y-4"
             >
               <p className="font-bold">Assumption of Risk and Release and Waiver of Liability</p>
-              
+
               <p>
                 I understand and acknowledge that participation in a car wash event involves inherent risks, including but not limited to: scratches, dents, paint or finish damage, mirror or antenna damage, water intrusion, personal injury, or other unforeseen harm. I voluntarily assume all such risks related to my participation and vehicle.
               </p>
@@ -430,8 +420,8 @@ export default function BookingPage() {
                   onChange={(e) => setAcceptedWaiver(e.target.checked)}
                   className="mt-1.5 h-5 w-5 rounded border-gray-300 text-primary focus:ring-primary disabled:opacity-50"
                 />
-                <label 
-                  htmlFor="accept-waiver" 
+                <label
+                  htmlFor="accept-waiver"
                   className={`text-sm md:text-base font-medium ${!hasScrolledToBottom ? 'text-gray-400' : 'text-gray-700 cursor-pointer'}`}
                 >
                   I have read and agree to the Assumption of Risk and Release and Waiver of Liability.
@@ -469,9 +459,9 @@ export default function BookingPage() {
           <p className="text-gray-500 text-sm">
             &copy; {new Date().getFullYear()} Young Khalsa Boys. All rights reserved.
           </p>
-          <a 
-            href="https://youngkhalsaboys.com/" 
-            target="_blank" 
+          <a
+            href="https://youngkhalsaboys.com/"
+            target="_blank"
             rel="noopener noreferrer"
             className="text-accent hover:underline text-xs font-medium"
           >
