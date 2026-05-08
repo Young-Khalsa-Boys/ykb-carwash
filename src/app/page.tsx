@@ -182,22 +182,22 @@ export default function BookingPage() {
             </div>
           </div>
 
-          <div className="mb-8 p-6 bg-gradient-to-br from-primary to-blue-700 rounded-xl text-white shadow-md relative overflow-hidden group">
-            <div className="relative z-10">
-              <h3 className="text-xl font-bold mb-2">Skip the line? ⚡️</h3>
-              <p className="text-blue-100 text-sm mb-4">
-                Save time at the counter by donating now. Most people donate in advance!
+          <div className="mb-8 p-6 bg-orange-50 rounded-xl border border-orange-100 relative overflow-hidden group">
+            <div className="relative z-10 text-left">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">Save time at check-in ⚡️</h3>
+              <p className="text-gray-600 text-sm mb-4">
+                Most people choose to donate in advance to skip the line at the counter.
               </p>
               <a 
                 href="/donate" 
-                className="inline-flex items-center gap-2 bg-white text-primary px-6 py-2.5 rounded-full font-bold hover:bg-blue-50 transition-all shadow-sm"
+                className="inline-flex items-center gap-2 bg-accent text-white px-6 py-2.5 rounded-full font-bold hover:bg-opacity-90 transition-all shadow-sm"
               >
                 Donate Now
                 <Play className="w-3 h-3 fill-current" />
               </a>
             </div>
-            <div className="absolute -right-4 -bottom-4 opacity-10 group-hover:scale-110 transition-transform duration-500">
-              <Car className="w-24 h-24 rotate-12" />
+            <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
+              <Car className="w-24 h-24 rotate-12 text-accent" />
             </div>
           </div>
 
