@@ -52,7 +52,7 @@ RETURNS TRIGGER AS $$
 DECLARE
   current_count INT;
   max_cap INT;
-  all_slots TEXT;
+--  all_slots TEXT;
 BEGIN
   -- Lock the slot row to prevent concurrent booking counts from bypassing the check
   SELECT max_capacity INTO max_cap 
@@ -61,8 +61,9 @@ BEGIN
   FOR UPDATE;
   
   IF max_cap IS NULL THEN
-    SELECT string_agg(id::text, ', ') INTO all_slots FROM slots;
-    RAISE EXCEPTION 'Slot not found for booking by user % with slot id %. Known slot ids: %', NEW.email, NEW.slot_id, all_slots;
+    --  SELECT string_agg(id::text, ', ') INTO all_slots FROM slots;
+    --    RAISE EXCEPTION 'Slot not found for booking by user % with slot id %. Known slot ids: %', NEW.email, NEW.slot_id, all_slots;
+    RAISE EXCEPTION 'Slot not found for booking by user % with slot id %', NEW.email, NEW.slot_id;
   END IF;
 
   -- Count existing bookings for this slot
