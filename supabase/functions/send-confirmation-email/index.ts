@@ -46,12 +46,15 @@ serve(async (req) => {
     const formattedDate = startTime.toLocaleDateString('en-US', {
       weekday: 'long',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
+      timeZone: 'America/New_York'
     })
     const formattedTime = startTime.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
-      hour12: true
+      hour12: true,
+      timeZone: 'America/New_York',
+      timeZoneName: 'short'
     })
 
     const emailHtml = `
