@@ -24,8 +24,11 @@ import {
   EyeOff,
   Car,
   Phone,
-  User
+  User,
+  CalendarPlus,
+  AlertCircle
 } from 'lucide-react'
+import Modal from '@/components/Modal'
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<any[]>([])
@@ -57,6 +60,17 @@ export default function AdminDashboard() {
   })
   const [atcSubmitting, setAtcSubmitting] = useState(false)
   const [atcSuccess, setAtcSuccess] = useState(false)
+  
+  // Mass Creation State
+  const [showMassCreate, setShowMassCreate] = useState(false)
+  const [massSlotConfig, setMassSlotConfig] = useState({
+    date: '',
+    startTime: '09:00',
+    endTime: '17:00',
+    interval: 30,
+    capacity: 5
+  })
+  const [isGenerating, setIsGenerating] = useState(false)
 
   const supabase = createClient()
 
@@ -277,6 +291,66 @@ export default function AdminDashboard() {
       setNewSlot({ date: '', startTime: '', endTime: '', capacity: 1 })
     } catch (err) {
       alert('Error adding slot')
+    }
+  }
+
+  async function massCreateSlots(e: React.FormEvent) {
+    e.preventDefault()
+    setIsGenerating(true)
+    
+    try {
+      const slotsToInsert = []
+      const baseDate = massSlotConfig.date
+      let current = new Date(`${baseDate}T${massSlotConfig.startTime}`)
+      const end = new Date(`${baseDate}T${massSlotConfig.endTime}`)
+      
+      if (current >= end) {
+        alert('Start time must be before end time')
+        setIsGenerating(false)
+        return
+      }
+
+      while (current < end) {
+        const slotStart = new Date(current)
+        const slotEnd = new Date(current.getTime() + massSlotConfig.interval * 60000)
+        
+        // Don't create a slot that goes beyond the end time
+        if (slotEnd > end) break
+
+        slotsToInsert.push({
+          start_time: slotStart.toISOString(),
+          end_time: slotEnd.toISOString(),
+          max_capacity: massSlotConfig.capacity,
+          is_active: true
+        })
+
+        current = new Date(slotEnd)
+      }
+
+      if (slotsToInsert.length === 0) {
+        alert('No slots could be generated with the given parameters.')
+        setIsGenerating(false)
+        return
+      }
+
+      if (!confirm(`This will create ${slotsToInsert.length} time slots on ${massSlotConfig.date}. Proceed?`)) {
+        setIsGenerating(false)
+        return
+      }
+
+      const { error } = await supabase
+        .from('slots')
+        .insert(slotsToInsert)
+      
+      if (error) throw error
+      
+      fetchData()
+      setShowMassCreate(false)
+      alert(`Successfully created ${slotsToInsert.length} slots!`)
+    } catch (err: any) {
+      alert('Error mass creating slots: ' + err.message)
+    } finally {
+      setIsGenerating(false)
     }
   }
 
@@ -807,78 +881,258 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <div className="space-y-8">
-              {/* Add/Edit Slot Form */}
-              <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-                  {editingSlot ? <Edit2 className="w-5 h-5 text-accent" /> : <Plus className="w-5 h-5 text-accent" />}
-                  {editingSlot ? 'Edit Time Slot' : 'Add New Time Slot'}
-                </h3>
-                <form onSubmit={editingSlot ? updateSlot : addSlot} className="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-500">Date</label>
-                    <input 
-                      required 
-                      type="date" 
-                      value={editingSlot ? editingSlot.date : newSlot.date}
-                      onChange={(e) => editingSlot 
-                        ? setEditingSlot({...editingSlot, date: e.target.value})
-                        : setNewSlot({...newSlot, date: e.target.value})}
-                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary outline-none" 
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-500">Start Time</label>
-                    <input 
-                      required 
-                      type="time" 
-                      value={editingSlot ? editingSlot.startTime : newSlot.startTime}
-                      onChange={(e) => editingSlot
-                        ? setEditingSlot({...editingSlot, startTime: e.target.value})
-                        : setNewSlot({...newSlot, startTime: e.target.value})}
-                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary outline-none" 
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-500">End Time</label>
-                    <input 
-                      required 
-                      type="time" 
-                      value={editingSlot ? editingSlot.endTime : newSlot.endTime}
-                      onChange={(e) => editingSlot
-                        ? setEditingSlot({...editingSlot, endTime: e.target.value})
-                        : setNewSlot({...newSlot, endTime: e.target.value})}
-                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary outline-none" 
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-gray-500">Max Capacity</label>
-                    <input 
-                      required 
-                      type="number" 
-                      min="1"
-                      value={editingSlot ? editingSlot.capacity : newSlot.capacity}
-                      onChange={(e) => editingSlot
-                        ? setEditingSlot({...editingSlot, capacity: parseInt(e.target.value)})
-                        : setNewSlot({...newSlot, capacity: parseInt(e.target.value)})}
-                      className="w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-primary outline-none" 
-                    />
-                  </div>
-                  <div className="flex gap-2">
-                    <button className="flex-1 bg-primary text-white py-2 rounded-md font-bold hover:bg-opacity-90 transition-all shadow-sm">
-                      {editingSlot ? 'Update Slot' : 'Create Slot'}
+            <div className="space-y-6">
+              {/* Slot Management Actions */}
+              <div className="flex flex-col md:flex-row gap-4">
+                {/* Single Slot Add */}
+                <div className="flex-1 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                  <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                    <Plus className="w-5 h-5 text-primary" />
+                    Add Single Slot
+                  </h3>
+                  <form onSubmit={addSlot} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</label>
+                      <input 
+                        required 
+                        type="date" 
+                        value={newSlot.date}
+                        onChange={(e) => setNewSlot({...newSlot, date: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Start</label>
+                      <input 
+                        required 
+                        type="time" 
+                        value={newSlot.startTime}
+                        onChange={(e) => setNewSlot({...newSlot, startTime: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">End</label>
+                      <input 
+                        required 
+                        type="time" 
+                        value={newSlot.endTime}
+                        onChange={(e) => setNewSlot({...newSlot, endTime: e.target.value})}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all" 
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Cars</label>
+                      <input 
+                        required 
+                        type="number" 
+                        min="1"
+                        value={newSlot.capacity}
+                        onChange={(e) => setNewSlot({...newSlot, capacity: parseInt(e.target.value)})}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary outline-none transition-all" 
+                      />
+                    </div>
+                    <button className="lg:col-span-4 bg-primary text-white py-2.5 rounded-lg font-bold hover:bg-opacity-90 transition-all shadow-sm flex items-center justify-center gap-2">
+                      <Plus className="w-4 h-4" />
+                      Create Time Slot
                     </button>
-                    {editingSlot && (
+                  </form>
+                </div>
+
+                {/* Mass Create Toggle */}
+                <div className="md:w-72 bg-gradient-to-br from-primary to-primary/80 p-6 rounded-xl shadow-lg border border-primary/20 text-white flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
+                      <CalendarPlus className="w-5 h-5 text-accent" />
+                      Bulk Generator
+                    </h3>
+                    <p className="text-white/70 text-xs leading-relaxed">
+                      Quickly generate multiple slots for an entire day with custom intervals.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setShowMassCreate(true)}
+                    className="mt-6 w-full bg-accent text-white py-2.5 rounded-lg font-bold hover:bg-opacity-90 transition-all shadow-md flex items-center justify-center gap-2"
+                  >
+                    Open Bulk Creator
+                  </button>
+                </div>
+              </div>
+
+              {/* Edit Modal */}
+              <Modal 
+                isOpen={!!editingSlot} 
+                onClose={() => setEditingSlot(null)} 
+                title="Edit Time Slot"
+              >
+                {editingSlot && (
+                  <form onSubmit={updateSlot} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2 space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">Date</label>
+                        <input 
+                          required 
+                          type="date" 
+                          value={editingSlot.date}
+                          onChange={(e) => setEditingSlot({...editingSlot, date: e.target.value})}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">Start Time</label>
+                        <input 
+                          required 
+                          type="time" 
+                          value={editingSlot.startTime}
+                          onChange={(e) => setEditingSlot({...editingSlot, startTime: e.target.value})}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">End Time</label>
+                        <input 
+                          required 
+                          type="time" 
+                          value={editingSlot.endTime}
+                          onChange={(e) => setEditingSlot({...editingSlot, endTime: e.target.value})}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none" 
+                        />
+                      </div>
+                      <div className="col-span-2 space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">Max Capacity (Cars)</label>
+                        <input 
+                          required 
+                          type="number" 
+                          min="1"
+                          value={editingSlot.capacity}
+                          onChange={(e) => setEditingSlot({...editingSlot, capacity: parseInt(e.target.value)})}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none" 
+                        />
+                      </div>
+                    </div>
+                    <div className="pt-4 flex gap-3">
                       <button 
                         type="button"
                         onClick={() => setEditingSlot(null)}
-                        className="px-4 py-2 border border-gray-300 rounded-md font-semibold text-gray-600 hover:bg-gray-50"
+                        className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-500 hover:bg-gray-50 transition-all"
                       >
                         Cancel
                       </button>
-                    )}
+                      <button className="flex-[2] bg-primary text-white py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-lg">
+                        Save Changes
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </Modal>
+
+              {/* Mass Create Modal */}
+              <Modal 
+                isOpen={showMassCreate} 
+                onClose={() => setShowMassCreate(false)} 
+                title="Bulk Slot Generator"
+              >
+                <form onSubmit={massCreateSlots} className="space-y-5">
+                  <div className="bg-amber-50 border border-amber-100 p-4 rounded-xl flex gap-3 text-amber-800">
+                    <AlertCircle className="w-5 h-5 shrink-0" />
+                    <p className="text-xs leading-relaxed">
+                      This tool will automatically divide the time range into slots based on the interval. 
+                      Example: 9:00 - 10:00 with a 30m interval creates two slots (9:00 and 9:30).
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-gray-400 uppercase">Target Date</label>
+                      <input 
+                        required 
+                        type="date" 
+                        value={massSlotConfig.date}
+                        onChange={(e) => setMassSlotConfig({...massSlotConfig, date: e.target.value})}
+                        className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none" 
+                      />
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">Start Day At</label>
+                        <input 
+                          required 
+                          type="time" 
+                          value={massSlotConfig.startTime}
+                          onChange={(e) => setMassSlotConfig({...massSlotConfig, startTime: e.target.value})}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none" 
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">End Day At</label>
+                        <input 
+                          required 
+                          type="time" 
+                          value={massSlotConfig.endTime}
+                          onChange={(e) => setMassSlotConfig({...massSlotConfig, endTime: e.target.value})}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none" 
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">Slot Interval</label>
+                        <select 
+                          value={massSlotConfig.interval}
+                          onChange={(e) => setMassSlotConfig({...massSlotConfig, interval: parseInt(e.target.value)})}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none bg-white"
+                        >
+                          <option value="15">Every 15 mins</option>
+                          <option value="20">Every 20 mins</option>
+                          <option value="30">Every 30 mins</option>
+                          <option value="45">Every 45 mins</option>
+                          <option value="60">Every 1 hour</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold text-gray-400 uppercase">Cars per Slot</label>
+                        <input 
+                          required 
+                          type="number" 
+                          min="1"
+                          value={massSlotConfig.capacity}
+                          onChange={(e) => setMassSlotConfig({...massSlotConfig, capacity: parseInt(e.target.value)})}
+                          className="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary outline-none" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 flex gap-3">
+                    <button 
+                      type="button"
+                      disabled={isGenerating}
+                      onClick={() => setShowMassCreate(false)}
+                      className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-bold text-gray-500 hover:bg-gray-50 transition-all disabled:opacity-50"
+                    >
+                      Cancel
+                    </button>
+                    <button 
+                      disabled={isGenerating}
+                      className="flex-[2] bg-accent text-white py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-lg flex items-center justify-center gap-2 disabled:bg-gray-300"
+                    >
+                      {isGenerating ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <CalendarPlus className="w-4 h-4" />
+                          Generate Slots
+                        </>
+                      )}
+                    </button>
                   </div>
                 </form>
-              </div>
+              </Modal>
 
               {/* Slots List */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -915,8 +1169,6 @@ export default function AdminDashboard() {
                                 endTime: format(endDate, 'HH:mm'),
                                 capacity: slot.max_capacity
                               })
-                              setActiveTab('slots') // Just in case
-                              window.scrollTo({ top: 0, behavior: 'smooth' })
                             }}
                             className="text-gray-400 hover:text-primary p-2 rounded-lg hover:bg-primary/5 transition-colors"
                             title="Edit Slot"
