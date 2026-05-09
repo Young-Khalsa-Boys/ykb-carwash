@@ -14,7 +14,7 @@ export default function BookingPage() {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    licensePlate: '',
+    email: '',
     vehicleMakeModel: '',
     vehicleColor: ''
   })
@@ -54,11 +54,6 @@ export default function BookingPage() {
     if (numbers.length <= 3) return numbers
     if (numbers.length <= 6) return `(${numbers.slice(0, 3)}) ${numbers.slice(3)}`
     return `(${numbers.slice(0, 3)}) ${numbers.slice(3, 6)}-${numbers.slice(6)}`
-  }
-
-  const validateLicensePlate = (value: string) => {
-    if (!value) return true // Optional
-    return /^[a-zA-Z0-9]{2,8}$/.test(value)
   }
 
   const handleWaiverScroll = () => {
@@ -116,18 +111,13 @@ export default function BookingPage() {
     e.preventDefault()
     if (!selectedSlot) return
 
-    if (formData.phone.replace(/\D/g, '').length !== 10) {
-      setError('Please enter a valid 10-digit phone number.')
-      return
-    }
-
-    if (!validateLicensePlate(formData.licensePlate)) {
-      setError('License plate must be 2-8 alphanumeric characters.')
-      return
-    }
-
-    if (!formData.name || !formData.vehicleMakeModel || !formData.vehicleColor) {
+    if (!formData.name || !formData.phone || !formData.email || !formData.vehicleMakeModel || !formData.vehicleColor) {
       setError('Please fill out all required fields.')
+      return
+    }
+
+    if (!formData.email.includes('@')) {
+      setError('Please enter a valid email address.')
       return
     }
 
@@ -150,7 +140,7 @@ export default function BookingPage() {
             slot_id: selectedSlot,
             name: formData.name,
             phone: formData.phone.replace(/\D/g, ''),
-            license_plate: formData.licensePlate ? formData.licensePlate.toUpperCase() : null,
+            email: formData.email,
             vehicle_make_model: formData.vehicleMakeModel,
             vehicle_color: formData.vehicleColor,
             status: 'waiting'
@@ -173,9 +163,12 @@ export default function BookingPage() {
           <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-primary mb-2">Booking Confirmed!</h1>
           <div className="space-y-4 mb-6">
-            <p className="text-gray-600">
-              We'll text you when your car is ready to be washed!
-            </p>
+            <div className="text-gray-600 space-y-4">
+              <p>We'll text you when it’s your turn!</p>
+              <p className="text-sm">
+                If you have any change in plans and need to cancel or would like to change your time slot, please contact us as soon as possible at <a href="tel:9145894890" className="text-primary font-bold">914-589-4890</a> or <a href="mailto:carwash@youngkhalsaboys.com" className="text-primary font-bold">carwash@youngkhalsaboys.com</a> so that we can open your time slot up for someone else.
+              </p>
+            </div>
             <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 flex items-center justify-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-primary" />
               <p className="text-sm text-primary font-medium">Your parking spot will be reserved</p>
@@ -190,13 +183,6 @@ export default function BookingPage() {
               Save time at the counter; Donate Now
               <Play className="w-4 h-4 fill-current" />
             </a>
-
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full text-gray-500 py-3 rounded-md font-semibold hover:bg-gray-100 transition-all text-sm"
-            >
-              Make Another Booking
-            </button>
           </div>
         </div>
       </div>
@@ -246,6 +232,17 @@ export default function BookingPage() {
                       className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
                     />
                   </div>
+                  <div className="md:col-span-2 space-y-1">
+                    <label className="text-sm font-medium text-gray-700">Email Address <span className="text-red-500">*</span></label>
+                    <input
+                      required
+                      type="email"
+                      placeholder="john@example.com"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -279,21 +276,10 @@ export default function BookingPage() {
                     />
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-sm font-medium text-gray-700">License Plate</label>
-                  <input
-                    type="text"
-                    placeholder="ABC1234 (Optional)"
-                    maxLength={8}
-                    value={formData.licensePlate}
-                    onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase() })}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent outline-none uppercase"
-                  />
-                  <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-green-500" />
-                    Parking spot will be reserved during wash
-                  </p>
-                </div>
+                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+                  <CheckCircle2 className="w-3 h-3 text-green-500" />
+                  Parking spot will be reserved during wash
+                </p>
               </div>
 
               {/* Slot Selection */}
@@ -301,6 +287,7 @@ export default function BookingPage() {
                 <h2 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
                   <Calendar className="w-5 h-5 text-accent" />
                   Select a Time Slot <span className="text-red-500">*</span>
+                  <span className="text-xs font-normal text-gray-500 ml-1">(Spots are limited; please limit to one booking per vehicle)</span>
                 </h2>
                 {loading ? (
                   <div className="flex justify-center py-8">

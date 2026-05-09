@@ -50,7 +50,7 @@ export default function AdminDashboard() {
   const [atcForm, setAtcForm] = useState({
     name: '',
     phone: '',
-    licensePlate: '',
+    email: '',
     vehicleMakeModel: '',
     vehicleColor: '',
     selectedSlot: ''
@@ -350,7 +350,7 @@ export default function AdminDashboard() {
           slot_id: atcForm.selectedSlot,
           name: atcForm.name,
           phone: atcForm.phone.replace(/\D/g, ''),
-          license_plate: atcForm.licensePlate.toUpperCase(),
+          email: atcForm.email,
           vehicle_make_model: atcForm.vehicleMakeModel,
           vehicle_color: atcForm.vehicleColor,
           status: 'waiting'
@@ -362,7 +362,7 @@ export default function AdminDashboard() {
       setAtcForm({
         name: '',
         phone: '',
-        licensePlate: '',
+        email: '',
         vehicleMakeModel: '',
         vehicleColor: '',
         selectedSlot: ''
@@ -508,13 +508,11 @@ export default function AdminDashboard() {
                               <td className="px-6 py-4">
                                 <div className="font-semibold text-gray-900">{booking.name}</div>
                                 <div className="text-sm text-gray-500">{formatPhone(booking.phone)}</div>
+                                <div className="text-[10px] text-gray-400 truncate max-w-[150px]">{booking.email}</div>
                               </td>
                               <td className="px-6 py-4">
                                 <div className="flex flex-col gap-1">
                                   <div className="text-sm font-medium text-gray-800">{booking.vehicle_color} {booking.vehicle_make_model}</div>
-                                  {booking.license_plate && (
-                                    <span className="w-fit px-2 py-0.5 bg-gray-100 rounded text-[10px] font-mono border border-gray-200 uppercase">{booking.license_plate}</span>
-                                  )}
                                 </div>
                               </td>
                               <td className="px-6 py-4">
@@ -600,10 +598,10 @@ export default function AdminDashboard() {
                             <td className="px-6 py-3 text-sm">
                               <div className="font-medium text-gray-900">{booking.name}</div>
                               <div className="text-[10px] text-gray-400">{formatPhone(booking.phone)}</div>
+                              <div className="text-[10px] text-gray-400">{booking.email}</div>
                             </td>
                             <td className="px-6 py-3 text-sm">
                               <div className="text-gray-600">{booking.vehicle_color} {booking.vehicle_make_model}</div>
-                              {booking.license_plate && <div className="text-[10px] font-mono text-gray-400 uppercase">{booking.license_plate}</div>}
                             </td>
                             <td className="px-6 py-3 text-sm text-gray-500">
                               {booking.slots ? format(new Date(booking.slots.start_time), 'MMM d, h:mm a') : 'N/A'}
@@ -677,6 +675,17 @@ export default function AdminDashboard() {
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
                           />
                         </div>
+                        <div className="space-y-1">
+                          <label className="text-sm font-semibold text-gray-700">Email Address</label>
+                          <input 
+                            required
+                            type="email" 
+                            placeholder="john@example.com"
+                            value={atcForm.email}
+                            onChange={(e) => setAtcForm({...atcForm, email: e.target.value})}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -709,16 +718,6 @@ export default function AdminDashboard() {
                               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none"
                             />
                           </div>
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-sm font-semibold text-gray-700">License Plate</label>
-                          <input 
-                            type="text" 
-                            placeholder="ABC1234"
-                            value={atcForm.licensePlate}
-                            onChange={(e) => setAtcForm({...atcForm, licensePlate: e.target.value.toUpperCase()})}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary outline-none uppercase"
-                          />
                         </div>
                       </div>
                     </div>
