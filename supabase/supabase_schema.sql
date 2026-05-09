@@ -36,12 +36,13 @@ CREATE POLICY "Public Insert Bookings" ON bookings FOR INSERT WITH CHECK (true);
 -- Allow authenticated users (admin) to manage everything
 CREATE POLICY "Admin Manage Slots" ON slots FOR ALL TO authenticated USING (true);
 CREATE POLICY "Admin Manage Bookings" ON bookings FOR ALL TO authenticated USING (true);
+CREATE POLICY "Public Read Bookings" ON bookings FOR SELECT USING (true);
 
 -- Explicitly grant permissions
 GRANT ALL ON TABLE slots TO postgres, authenticated, service_role;
 GRANT SELECT ON TABLE slots TO anon;
 GRANT ALL ON TABLE bookings TO postgres, authenticated, service_role;
-GRANT INSERT ON TABLE bookings TO anon;
+GRANT INSERT, SELECT ON TABLE bookings TO anon;
 
 -- Add Realtime to Bookings and Slots Tables
 ALTER PUBLICATION supabase_realtime ADD TABLE bookings, slots;

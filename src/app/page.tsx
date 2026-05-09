@@ -320,11 +320,14 @@ export default function BookingPage() {
                         <div className="text-sm text-gray-600">
                           {format(new Date(slot.start_time), 'h:mm a')} - {format(new Date(slot.end_time), 'h:mm a')}
                         </div>
-                        {slot.is_full && (
-                          <div className="absolute top-2 right-2 px-2 py-0.5 bg-red-100 text-red-600 text-[10px] font-bold rounded uppercase">
-                            Full
-                          </div>
-                        )}
+                        <div className="mt-2 flex items-center justify-between">
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${slot.is_full ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                            {slot.current_bookings} / {slot.max_capacity} Occupied
+                          </span>
+                          {slot.is_full && (
+                            <span className="text-[10px] font-black text-red-600 uppercase">Full</span>
+                          )}
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -417,28 +420,34 @@ export default function BookingPage() {
                 </label>
               </div>
 
-              <div className="flex gap-4">
-                <button
-                  type="button"
-                  onClick={() => setStep('form')}
-                  className="px-6 py-4 rounded-lg font-bold text-gray-600 hover:bg-gray-100 transition-all border border-gray-200"
-                >
-                  Back
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={!acceptedWaiver || submitting}
-                  className="flex-1 bg-primary text-white py-4 rounded-lg font-bold text-lg hover:bg-opacity-90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-md"
-                >
-                  {submitting ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      Finalizing...
-                    </>
-                  ) : (
-                    'Confirm Booking'
-                  )}
-                </button>
+              <div className="flex flex-col gap-4">
+                {error && <div className="p-3 bg-red-100 text-red-700 rounded-md text-sm">{error}</div>}
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null)
+                      setStep('form')
+                    }}
+                    className="px-6 py-4 rounded-lg font-bold text-gray-600 hover:bg-gray-100 transition-all border border-gray-200"
+                  >
+                    Back
+                  </button>
+                  <button
+                    onClick={handleSubmit}
+                    disabled={!acceptedWaiver || submitting}
+                    className="flex-1 bg-primary text-white py-4 rounded-lg font-bold text-lg hover:bg-opacity-90 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 shadow-md"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Finalizing...
+                      </>
+                    ) : (
+                      'Confirm Booking'
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
