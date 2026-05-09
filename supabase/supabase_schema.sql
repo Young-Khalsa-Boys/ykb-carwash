@@ -11,7 +11,7 @@ CREATE TABLE slots (
 -- Create bookings table
 CREATE TABLE bookings (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  slot_id UUID REFERENCES slots(id) ON DELETE CASCADE,
+  slot_id UUID NOT NULL REFERENCES slots(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   phone TEXT NOT NULL,
   license_plate TEXT,
@@ -45,3 +45,42 @@ GRANT INSERT ON TABLE bookings TO anon;
 
 -- Add Realtime to Bookings and Slots Tables
 ALTER PUBLICATION supabase_realtime ADD TABLE bookings, slots;
+
+-- Function to check slot availability and prevent overbooking
+CREATE OR REPLACE FUNCTION check_slot_availability()
+RETURNS TRIGGER AS $$
+DECLARE
+  current_count INT;
+  max_cap INT;
+  all_slots TEXT;
+BEGIN
+  -- Lock the slot row to prevent concurrent booking counts from bypassing the check
+  SELECT max_capacity INTO max_cap 
+  FROM slots 
+  WHERE id = NEW.slot_id 
+  FOR UPDATE;
+  
+  IF max_cap IS NULL THEN
+    SELECT string_agg(id::text, ', ') INTO all_slots FROM slots;
+    RAISE EXCEPTION 'Slot not found for booking by user % with slot id %. Known slot ids: %', NEW.email, NEW.slot_id, all_slots;
+  END IF;
+
+  -- Count existing bookings for this slot
+  SELECT COUNT(*) INTO current_count 
+  FROM bookings 
+  WHERE slot_id = NEW.slot_id;
+  
+  IF current_count >= max_cap THEN
+    RAISE EXCEPTION 'This time slot is already full. Please select another slot.' USING ERRCODE = 'P0001';
+  END IF;
+  
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
+
+-- Trigger to enforce availability check before each booking
+DROP TRIGGER IF EXISTS tr_check_slot_availability ON bookings;
+CREATE TRIGGER tr_check_slot_availability
+BEFORE INSERT ON bookings
+FOR EACH ROW
+EXECUTE FUNCTION check_slot_availability();
