@@ -881,7 +881,6 @@ export default function AdminDashboard() {
             </div>
           ) : (
             <div className="space-y-8">
-            <div className="space-y-6">
               {/* Slot Management Actions */}
               <div className="flex flex-col md:flex-row gap-4">
                 {/* Single Slot Add */}
