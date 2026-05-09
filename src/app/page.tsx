@@ -111,13 +111,24 @@ export default function BookingPage() {
     e.preventDefault()
     if (!selectedSlot) return
 
-    if (!formData.name || !formData.phone || !formData.email || !formData.vehicleMakeModel || !formData.vehicleColor) {
-      setError('Please fill out all required fields.')
+    if (formData.name.trim().length < 2) {
+      setError('Please enter a full name (minimum 2 characters).')
       return
     }
 
-    if (!formData.email.includes('@')) {
+    if (formData.phone.replace(/\D/g, '').length !== 10) {
+      setError('Please enter a valid 10-digit phone number.')
+      return
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
       setError('Please enter a valid email address.')
+      return
+    }
+
+    if (!formData.vehicleMakeModel || !formData.vehicleColor) {
+      setError('Please fill out all required fields.')
       return
     }
 

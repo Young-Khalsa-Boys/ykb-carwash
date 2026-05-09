@@ -337,8 +337,24 @@ export default function AdminDashboard() {
       return
     }
 
+    if (atcForm.name.trim().length < 2) {
+      alert('Please enter a full name (minimum 2 characters).')
+      return
+    }
+
     if (atcForm.phone.replace(/\D/g, '').length !== 10) {
       alert('Please enter a valid 10-digit phone number.')
+      return
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(atcForm.email)) {
+      alert('Please enter a valid email address.')
+      return
+    }
+
+    if (!atcForm.vehicleMakeModel || !atcForm.vehicleColor) {
+      alert('Please fill out all vehicle details.')
       return
     }
 
