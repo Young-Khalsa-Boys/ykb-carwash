@@ -29,9 +29,9 @@ export default function DonatePage() {
 
         {/* GiveButter Widget */}
         <div className="bg-white rounded-3xl shadow-2xl shadow-gray-200/60 border border-gray-100 overflow-hidden">
-          <div className="p-1 min-h-[700px] flex items-center justify-center bg-white">
+          <div className="p-1 min-h-[800px] flex items-center justify-center bg-white">
             {/* @ts-ignore */}
-            <givebutter-widget id="LZokK5"></givebutter-widget>
+            <givebutter-widget id="LZokK5" width="100%" height="800"></givebutter-widget>
           </div>
         </div>
 
