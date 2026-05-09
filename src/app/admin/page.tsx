@@ -938,22 +938,19 @@ export default function AdminDashboard() {
                   </form>
                 </div>
 
-                {/* Mass Create Toggle */}
-                <div className="md:w-72 bg-gradient-to-br from-primary to-primary/80 p-6 rounded-xl shadow-lg border border-primary/20 text-white flex flex-col justify-between">
+                {/* Mass Create Section */}
+                <div className="md:w-72 bg-gray-50 p-6 rounded-xl border border-gray-200 flex flex-col justify-between">
                   <div>
-                    <h3 className="text-lg font-bold mb-2 flex items-center gap-2">
-                      <CalendarPlus className="w-5 h-5 text-accent" />
-                      Bulk Generator
-                    </h3>
-                    <p className="text-white/70 text-xs leading-relaxed">
-                      Quickly generate multiple slots for an entire day with custom intervals.
-                    </p>
+                    <div className="bg-primary/10 w-10 h-10 rounded-lg flex items-center justify-center mb-4">
+                      <CalendarPlus className="w-6 h-6 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900">Bulk Slot Creator</h3>
                   </div>
                   <button 
                     onClick={() => setShowMassCreate(true)}
-                    className="mt-6 w-full bg-accent text-white py-2.5 rounded-lg font-bold hover:bg-opacity-90 transition-all shadow-md flex items-center justify-center gap-2"
+                    className="mt-6 w-full bg-white border border-gray-200 text-gray-700 py-2.5 rounded-lg font-bold hover:bg-gray-50 hover:border-primary/30 transition-all flex items-center justify-center gap-2 shadow-sm"
                   >
-                    Open Bulk Creator
+                    Open Generator
                   </button>
                 </div>
               </div>
@@ -1115,7 +1112,7 @@ export default function AdminDashboard() {
                     </button>
                     <button 
                       disabled={isGenerating}
-                      className="flex-[2] bg-accent text-white py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-lg flex items-center justify-center gap-2 disabled:bg-gray-300"
+                      className="flex-[2] bg-primary text-white py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-lg flex items-center justify-center gap-2 disabled:bg-gray-300"
                     >
                       {isGenerating ? (
                         <>
