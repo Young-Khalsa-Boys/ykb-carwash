@@ -179,10 +179,6 @@ export default function BookingPage() {
                 If you have any change in plans and need to cancel or would like to change your time slot, please contact us as soon as possible at <a href="tel:9145894890" className="text-primary font-bold">914-589-4890</a> or <a href="mailto:carwash@youngkhalsaboys.com" className="text-primary font-bold">carwash@youngkhalsaboys.com</a> so that we can open your time slot up for someone else.
               </p>
             </div>
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 flex items-center justify-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-primary" />
-              <p className="text-sm text-primary font-medium">Your parking spot will be reserved</p>
-            </div>
           </div>
 
           <div className="flex flex-col gap-3">
@@ -286,10 +282,6 @@ export default function BookingPage() {
                     />
                   </div>
                 </div>
-                <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3 text-green-500" />
-                  Parking spot will be reserved during wash
-                </p>
               </div>
 
               {/* Slot Selection */}

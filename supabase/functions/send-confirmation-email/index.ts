@@ -98,7 +98,7 @@ serve(async (req) => {
                 <p style="margin: 8px 0 0 0; font-size: 14px; color: #374151;">Please stay near your phone. We'll notify you as soon as we're ready for your vehicle.</p>
               </div>
 
-              <p style="margin-bottom: 24px;">A parking spot will be reserved for you during your session. To speed things up at the counter, you can donate online in advance:</p>
+              <p style="margin-bottom: 24px;">To speed things up at the counter, you can donate online in advance:</p>
 
               <a href="https://carwash.youngkhalsaboys.com/donate" class="btn">Donate Now & Save Time</a>
 
