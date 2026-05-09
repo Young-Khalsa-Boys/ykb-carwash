@@ -186,7 +186,7 @@ export default function BookingPage() {
               href="/donate"
               className="w-full inline-flex items-center justify-center gap-2 bg-accent text-white py-4 rounded-lg font-bold hover:bg-opacity-90 transition-all shadow-sm"
             >
-              Save time at the counter; Donate Now
+              DONATE NOW (Save time at the car wash)
               <Play className="w-4 h-4 fill-current" />
             </a>
           </div>
