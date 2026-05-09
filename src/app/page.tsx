@@ -82,7 +82,6 @@ export default function BookingPage() {
         .from('bookings')
         .select('slot_id, status')
         .in('slot_id', (slotsData as any[]).map((s: any) => s.id))
-        .neq('status', 'cancelled')
 
       if (bookingsError) throw bookingsError
 

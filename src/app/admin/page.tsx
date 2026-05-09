@@ -203,7 +203,7 @@ export default function AdminDashboard() {
 
   const getBookingsBySlot = () => {
     const grouped: Record<string, any[]> = {}
-    bookings.filter((b: any) => b.status !== 'cancelled').forEach((b: any) => {
+    bookings.forEach((b: any) => {
       const slotId = b.slot_id
       if (!grouped[slotId]) grouped[slotId] = []
       grouped[slotId].push(b)
@@ -470,7 +470,7 @@ export default function AdminDashboard() {
     const confirmMsg = status === 'completed'
       ? 'Mark this booking as completed?'
       : status === 'cancelled'
-        ? 'Are you sure you want to unbook this customer? This will remove them from the slot.'
+        ? 'Are you sure you want to unbook this customer? This will PERMANENTLY remove them from the slot.'
         : status === 'waiting'
           ? 'Move this booking back to the active queue?'
           : `Change status to ${status}?`
@@ -478,10 +478,16 @@ export default function AdminDashboard() {
     if (!confirm(confirmMsg)) return
 
     try {
-      await supabase.from('bookings').update({ status }).eq('id', id)
+      if (status === 'cancelled') {
+        const { error } = await supabase.from('bookings').delete().eq('id', id)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('bookings').update({ status }).eq('id', id)
+        if (error) throw error
+      }
       fetchData()
-    } catch (err) {
-      alert('Error updating status')
+    } catch (err: any) {
+      alert('Error updating status: ' + err.message)
     }
   }
 
@@ -566,7 +572,7 @@ export default function AdminDashboard() {
                 </h3>
 
                 {slots.filter((s: any) => bookingsBySlot[s.id]?.length > 0).map((slot: any) => {
-                  const totalRegCount = bookings.filter((b: any) => b.slot_id === slot.id && b.status !== 'cancelled').length
+                  const totalRegCount = bookings.filter((b: any) => b.slot_id === slot.id).length
                   return (
                     <div key={slot.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                       <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
@@ -817,7 +823,7 @@ export default function AdminDashboard() {
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {slots.map((slot: any) => {
-                        const regCount = bookings.filter((b: any) => b.slot_id === slot.id && b.status !== 'cancelled').length
+                        const regCount = bookings.filter((b: any) => b.slot_id === slot.id).length
                         const isFull = regCount >= slot.max_capacity
                         const isFlex = !slot.is_active
                         const isSelected = atcForm.selectedSlot === slot.id
@@ -1117,7 +1123,7 @@ export default function AdminDashboard() {
               {/* Slots List */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {slots.map((slot: any) => {
-                  const regCount = bookings.filter((b: any) => b.slot_id === slot.id && b.status !== 'cancelled').length
+                  const regCount = bookings.filter((b: any) => b.slot_id === slot.id).length
                   return (
                     <div key={slot.id} className={`bg-white p-6 rounded-xl shadow-sm border group hover:border-primary/50 transition-all relative ${!slot.is_active ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200'}`}>
                       {!slot.is_active && (
