@@ -5,8 +5,8 @@ import Link from 'next/link'
 
 export default function DonatePage() {
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
-      <div className="max-w-2xl mx-auto">
+    <div className="min-h-screen bg-gray-50 py-12 px-4 md:px-8">
+      <div className="max-w-5xl mx-auto">
         {/* Navigation */}
         <Link 
           href="/" 
@@ -17,19 +17,19 @@ export default function DonatePage() {
         </Link>
 
         {/* Header */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-16">
           <img src="/logo.png" alt="YKB Logo" className="h-32 mx-auto mb-6" />
-          <h1 className="text-4xl font-black text-primary mb-6">Support Our Fundraiser</h1>
+          <h1 className="text-4xl md:text-5xl font-black text-primary mb-8">Support Our Fundraiser</h1>
           
-          <div className="space-y-2 text-lg text-gray-600 font-medium">
+          <div className="space-y-3 text-xl text-gray-600 font-medium">
             <p>Suggested donation for Sedans: <span className="text-primary font-bold">$25</span></p>
             <p>Suggested donation for SUVs and Large Vehicles: <span className="text-primary font-bold">$35</span></p>
           </div>
         </div>
 
         {/* GiveButter Widget */}
-        <div className="bg-white rounded-2xl shadow-xl shadow-gray-200/50 border border-gray-100 overflow-hidden">
-          <div className="p-1 min-h-[500px] flex items-center justify-center bg-white">
+        <div className="bg-white rounded-3xl shadow-2xl shadow-gray-200/60 border border-gray-100 overflow-hidden">
+          <div className="p-1 min-h-[700px] flex items-center justify-center bg-white">
             {/* @ts-ignore */}
             <givebutter-widget id="LZokK5"></givebutter-widget>
           </div>
