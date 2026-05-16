@@ -39,7 +39,7 @@ export default function AdminDashboard() {
   const [slots, setSlots] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'bookings' | 'slots' | 'atc'>('bookings')
-  const [isAuthenticated, setIsAuthenticated] = useState(true)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
   const [verifying, setVerifying] = useState(false)
@@ -114,7 +114,9 @@ export default function AdminDashboard() {
   
   // Move Slot State
   const [movingBooking, setMovingBooking] = useState<any>(null)
+  const [selectedNewSlotId, setSelectedNewSlotId] = useState<string | null>(null)
   const [isMoveSubmitting, setIsMoveSubmitting] = useState(false)
+
 
 
   const supabase = createClient()
@@ -593,33 +595,29 @@ export default function AdminDashboard() {
     }
   }
 
-  async function handleMoveSlot(newSlotId: string) {
-    if (!movingBooking) return
+  async function handleMoveSlot() {
+    if (!movingBooking || !selectedNewSlotId) return
 
-    showConfirm(
-      'Confirm Move',
-      `Move ${movingBooking.name} to this slot?`,
-      async () => {
-        setIsMoveSubmitting(true)
-        try {
-          const { error } = await supabase
-            .from('bookings')
-            .update({ slot_id: newSlotId })
-            .eq('id', movingBooking.id)
+    setIsMoveSubmitting(true)
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ slot_id: selectedNewSlotId })
+        .eq('id', movingBooking.id)
 
-          if (error) throw error
-          
-          showAlert('Success', 'Booking moved successfully', 'success')
-          setMovingBooking(null)
-          fetchData()
-        } catch (err: any) {
-          showAlert('Error', 'Error moving booking: ' + err.message, 'error')
-        } finally {
-          setIsMoveSubmitting(false)
-        }
-      }
-    )
+      if (error) throw error
+
+      showAlert('Success', 'Booking moved successfully', 'success')
+      setMovingBooking(null)
+      setSelectedNewSlotId(null)
+      fetchData()
+    } catch (err: any) {
+      showAlert('Error', 'Error moving booking: ' + err.message, 'error')
+    } finally {
+      setIsMoveSubmitting(false)
+    }
   }
+
 
 
   return (
@@ -1413,7 +1411,10 @@ export default function AdminDashboard() {
       {/* Move Slot Modal */}
       <Modal
         isOpen={!!movingBooking}
-        onClose={() => setMovingBooking(null)}
+        onClose={() => {
+          setMovingBooking(null)
+          setSelectedNewSlotId(null)
+        }}
         title={`Move Booking: ${movingBooking?.name}`}
       >
         <div className="space-y-6">
@@ -1431,20 +1432,23 @@ export default function AdminDashboard() {
               const isFull = regCount >= slot.max_capacity
               const isFlex = !slot.is_active
               const isCurrent = movingBooking?.slot_id === slot.id
+              const isSelected = selectedNewSlotId === slot.id
 
               return (
                 <button
                   key={slot.id}
                   disabled={isFull || isCurrent || isMoveSubmitting}
-                  onClick={() => handleMoveSlot(slot.id)}
+                  onClick={() => setSelectedNewSlotId(slot.id)}
                   className={`p-4 text-left border rounded-xl transition-all relative ${
-                    isCurrent
-                      ? 'border-blue-400 bg-blue-50 cursor-default opacity-60'
-                      : isFull
-                        ? 'border-gray-200 bg-gray-50 opacity-40 cursor-not-allowed'
-                        : isFlex
-                          ? 'border-amber-400 bg-amber-50/50 hover:bg-amber-100 hover:scale-[1.02]'
-                          : 'border-gray-200 hover:border-primary hover:bg-primary/5 hover:scale-[1.02]'
+                    isSelected
+                      ? 'border-primary bg-primary/5 ring-2 ring-primary ring-inset'
+                      : isCurrent
+                        ? 'border-blue-400 bg-blue-50 cursor-default opacity-60'
+                        : isFull
+                          ? 'border-gray-200 bg-gray-50 opacity-40 cursor-not-allowed'
+                          : isFlex
+                            ? 'border-amber-400 bg-amber-50/50 hover:bg-amber-100 hover:scale-[1.02]'
+                            : 'border-gray-200 hover:border-primary hover:bg-primary/5 hover:scale-[1.02]'
                   }`}
                 >
                   {isFlex && (
@@ -1464,23 +1468,47 @@ export default function AdminDashboard() {
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isFull ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
                       {regCount} / {slot.max_capacity}
                     </span>
-                    {isMoveSubmitting && movingBooking?.slot_id === slot.id && (
-                       <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-                    )}
+                    {isSelected && <CheckCircle className="w-4 h-4 text-primary" />}
                   </div>
                 </button>
               )
             })}
           </div>
 
-          <button
-            onClick={() => setMovingBooking(null)}
-            className="w-full bg-gray-50 text-gray-500 py-3 rounded-xl font-bold hover:bg-gray-100 transition-all"
-          >
-            Cancel
-          </button>
+          <div className="space-y-3">
+            {selectedNewSlotId && (
+              <button
+                disabled={isMoveSubmitting}
+                onClick={handleMoveSlot}
+                className="w-full bg-amber-500 text-white py-4 rounded-xl font-bold text-lg hover:bg-amber-600 disabled:bg-gray-300 transition-all flex items-center justify-center gap-3 shadow-lg"
+              >
+                {isMoveSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    Moving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-5 h-5" />
+                    Confirm Move
+                  </>
+                )}
+              </button>
+            )}
+            
+            <button
+              onClick={() => {
+                setMovingBooking(null)
+                setSelectedNewSlotId(null)
+              }}
+              className="w-full bg-gray-50 text-gray-500 py-3 rounded-xl font-bold hover:bg-gray-100 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </Modal>
+
 
     </div>
   )
