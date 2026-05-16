@@ -346,7 +346,7 @@ export default function AdminDashboard() {
     setIsGenerating(true)
 
     try {
-      const slotsToInsert = []
+      const slotsToInsert: any[] = []
       const baseDate = massSlotConfig.date
       let current = new Date(`${baseDate}T${massSlotConfig.startTime}`)
       const end = new Date(`${baseDate}T${massSlotConfig.endTime}`)
