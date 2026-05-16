@@ -87,4 +87,3 @@ CREATE TRIGGER tr_check_slot_availability
 BEFORE INSERT ON bookings
 FOR EACH ROW
 EXECUTE FUNCTION check_slot_availability();
-e
