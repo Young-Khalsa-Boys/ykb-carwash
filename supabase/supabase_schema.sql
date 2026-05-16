@@ -20,6 +20,7 @@ CREATE TABLE bookings (
   email TEXT NOT NULL,
   status TEXT DEFAULT 'pending', -- pending, waiting, in_progress, completed
   donated BOOLEAN DEFAULT false,
+  donation_amount NUMERIC DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 

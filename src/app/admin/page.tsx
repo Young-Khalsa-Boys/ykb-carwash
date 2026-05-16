@@ -29,6 +29,9 @@ import {
   AlertCircle
 } from 'lucide-react'
 import Modal from '@/components/Modal'
+import AlertModal from '@/components/AlertModal'
+import ConfirmModal from '@/components/ConfirmModal'
+import { DollarSign } from 'lucide-react'
 
 export default function AdminDashboard() {
   const [bookings, setBookings] = useState<any[]>([])
@@ -71,6 +74,42 @@ export default function AdminDashboard() {
     capacity: 5
   })
   const [isGenerating, setIsGenerating] = useState(false)
+
+  // Modal State
+  const [alertConfig, setAlertConfig] = useState<{ isOpen: boolean; title: string; message: string; type?: 'success' | 'error' | 'info' }>({
+    isOpen: false,
+    title: '',
+    message: '',
+  })
+  const [confirmConfig, setConfirmConfig] = useState<{ 
+    isOpen: boolean; 
+    title: string; 
+    message: string; 
+    onConfirm: () => void; 
+    confirmText?: string; 
+    variant?: 'danger' | 'primary' 
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    onConfirm: () => { },
+  })
+
+  // Donation Modal State
+  const [donationModal, setDonationModal] = useState<{
+    isOpen: boolean;
+    bookingId: string;
+    customerName: string;
+    currentAmount: number;
+    isDonated: boolean;
+  }>({
+    isOpen: false,
+    bookingId: '',
+    customerName: '',
+    currentAmount: 0,
+    isDonated: false,
+  })
+  const [donationInput, setDonationInput] = useState('')
 
   const supabase = createClient()
 
@@ -161,6 +200,14 @@ export default function AdminDashboard() {
     await supabase.auth.signOut()
     localStorage.removeItem('ykb_admin_password')
     setIsAuthenticated(false)
+  }
+
+  const showAlert = (title: string, message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setAlertConfig({ isOpen: true, title, message, type })
+  }
+
+  const showConfirm = (title: string, message: string, onConfirm: () => void, variant: 'danger' | 'primary' = 'primary', confirmText?: string) => {
+    setConfirmConfig({ isOpen: true, title, message, onConfirm, variant, confirmText })
   }
 
   async function fetchData() {
@@ -290,7 +337,7 @@ export default function AdminDashboard() {
       fetchData()
       setNewSlot({ date: '', startTime: '', endTime: '', capacity: 1 })
     } catch (err) {
-      alert('Error adding slot')
+      showAlert('Error', 'Error adding slot', 'error')
     }
   }
 
@@ -305,7 +352,7 @@ export default function AdminDashboard() {
       const end = new Date(`${baseDate}T${massSlotConfig.endTime}`)
 
       if (current >= end) {
-        alert('Start time must be before end time')
+        showAlert('Invalid Time Range', 'Start time must be before end time', 'error')
         setIsGenerating(false)
         return
       }
@@ -328,40 +375,52 @@ export default function AdminDashboard() {
       }
 
       if (slotsToInsert.length === 0) {
-        alert('No slots could be generated with the given parameters.')
+        showAlert('No Slots', 'No slots could be generated with the given parameters.', 'info')
         setIsGenerating(false)
         return
       }
 
-      if (!confirm(`This will create ${slotsToInsert.length} time slots on ${massSlotConfig.date}. Proceed?`)) {
-        setIsGenerating(false)
-        return
-      }
+      showConfirm(
+        'Confirm Mass Creation',
+        `This will create ${slotsToInsert.length} time slots on ${massSlotConfig.date}. Proceed?`,
+        async () => {
+          setIsGenerating(true)
+          try {
+            const { error } = await supabase
+              .from('slots')
+              .insert(slotsToInsert)
 
-      const { error } = await supabase
-        .from('slots')
-        .insert(slotsToInsert)
+            if (error) throw error
 
-      if (error) throw error
-
-      fetchData()
-      setShowMassCreate(false)
-      alert(`Successfully created ${slotsToInsert.length} slots!`)
-    } catch (err: any) {
-      alert('Error mass creating slots: ' + err.message)
-    } finally {
+            fetchData()
+            setShowMassCreate(false)
+            showAlert('Success', `Successfully created ${slotsToInsert.length} slots!`, 'success')
+          } catch (err: any) {
+            showAlert('Error', 'Error mass creating slots: ' + err.message, 'error')
+          } finally {
+            setIsGenerating(false)
+          }
+        }
+      )
       setIsGenerating(false)
-    }
+      return
   }
 
   async function deleteSlot(id: string) {
-    if (!confirm('Are you sure you want to delete this slot? All associated bookings will be deleted.')) return
-    try {
-      await supabase.from('slots').delete().eq('id', id)
-      fetchData()
-    } catch (err) {
-      alert('Error deleting slot')
-    }
+    showConfirm(
+      'Delete Slot',
+      'Are you sure you want to delete this slot? All associated bookings will be deleted.',
+      async () => {
+        try {
+          await supabase.from('slots').delete().eq('id', id)
+          fetchData()
+        } catch (err) {
+          showAlert('Error', 'Error deleting slot', 'error')
+        }
+      },
+      'danger',
+      'Delete'
+    )
   }
 
   async function updateSlot(e: React.FormEvent) {
@@ -383,52 +442,54 @@ export default function AdminDashboard() {
       fetchData()
       setEditingSlot(null)
     } catch (err) {
-      alert('Error updating slot')
+      showAlert('Error', 'Error updating slot', 'error')
     }
   }
 
   async function toggleSlotActive(id: string, currentStatus: boolean) {
+    const title = currentStatus ? 'Make FLEX Slot' : 'Make Slot Public';
     const action = currentStatus ? 'Make this a FLEX slot? (It will be hidden from public signup)' : 'Make this slot public?';
-    if (!confirm(action)) return;
+    
+    showConfirm(title, action, async () => {
+      try {
+        const { error } = await supabase
+          .from('slots')
+          .update({ is_active: !currentStatus })
+          .eq('id', id)
 
-    try {
-      const { error } = await supabase
-        .from('slots')
-        .update({ is_active: !currentStatus })
-        .eq('id', id)
-
-      if (error) throw error
-      fetchData()
-    } catch (err) {
-      alert('Error toggling slot status')
-    }
+        if (error) throw error
+        fetchData()
+      } catch (err) {
+        showAlert('Error', 'Error toggling slot status', 'error')
+      }
+    });
   }
 
   async function handleAtcSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!atcForm.selectedSlot) {
-      alert('Please select a slot')
+      showAlert('Required', 'Please select a slot', 'info')
       return
     }
 
     if (atcForm.name.trim().length < 2) {
-      alert('Please enter a full name (minimum 2 characters).')
+      showAlert('Required', 'Please enter a full name (minimum 2 characters).', 'info')
       return
     }
 
     if (atcForm.phone.replace(/\D/g, '').length !== 10) {
-      alert('Please enter a valid 10-digit phone number.')
+      showAlert('Required', 'Please enter a valid 10-digit phone number.', 'info')
       return
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!emailRegex.test(atcForm.email)) {
-      alert('Please enter a valid email address.')
+      showAlert('Required', 'Please enter a valid email address.', 'info')
       return
     }
 
     if (!atcForm.vehicleMakeModel || !atcForm.vehicleColor) {
-      alert('Please fill out all vehicle details.')
+      showAlert('Required', 'Please fill out all vehicle details.', 'info')
       return
     }
 
@@ -460,13 +521,14 @@ export default function AdminDashboard() {
       fetchData()
       setTimeout(() => setAtcSuccess(false), 3000)
     } catch (err: any) {
-      alert('Error creating ATC booking: ' + err.message)
+      showAlert('Error', 'Error creating ATC booking: ' + err.message, 'error')
     } finally {
       setAtcSubmitting(false)
     }
   }
 
   async function updateBookingStatus(id: string, status: string) {
+    const title = status === 'completed' ? 'Complete Wash' : status === 'cancelled' ? 'Unbook Customer' : 'Update Status'
     const confirmMsg = status === 'completed'
       ? 'Mark this booking as completed?'
       : status === 'cancelled'
@@ -475,36 +537,50 @@ export default function AdminDashboard() {
           ? 'Move this booking back to the active queue?'
           : `Change status to ${status}?`
 
-    if (!confirm(confirmMsg)) return
-
-    try {
-      if (status === 'cancelled') {
-        const { error } = await supabase.from('bookings').delete().eq('id', id)
-        if (error) throw error
-      } else {
-        const { error } = await supabase.from('bookings').update({ status }).eq('id', id)
-        if (error) throw error
+    showConfirm(title, confirmMsg, async () => {
+      try {
+        if (status === 'cancelled') {
+          const { error } = await supabase.from('bookings').delete().eq('id', id)
+          if (error) throw error
+        } else {
+          const { error } = await supabase.from('bookings').update({ status }).eq('id', id)
+          if (error) throw error
+        }
+        fetchData()
+      } catch (err: any) {
+        showAlert('Error', 'Error updating status: ' + err.message, 'error')
       }
-      fetchData()
-    } catch (err: any) {
-      alert('Error updating status: ' + err.message)
-    }
+    }, status === 'cancelled' ? 'danger' : 'primary', status === 'cancelled' ? 'Unbook' : 'Confirm')
   }
 
-  async function toggleDonated(id: string, currentStatus: boolean) {
-    const action = currentStatus ? 'Mark as unpaid?' : 'Mark as donated?';
-    if (!confirm(action)) return;
+  async function openDonationModal(booking: any) {
+    setDonationModal({
+      isOpen: true,
+      bookingId: booking.id,
+      customerName: booking.name,
+      currentAmount: booking.donation_amount || 0,
+      isDonated: !!booking.donated
+    })
+    setDonationInput(booking.donation_amount?.toString() || '')
+  }
+
+  async function handleDonationUpdate(unmark: boolean = false) {
+    const amount = unmark ? 0 : parseFloat(donationInput) || 0
 
     try {
       const { error } = await supabase
         .from('bookings')
-        .update({ donated: !currentStatus })
-        .eq('id', id)
+        .update({
+          donated: unmark ? false : true,
+          donation_amount: amount
+        })
+        .eq('id', donationModal.bookingId)
 
       if (error) throw error
       fetchData()
+      setDonationModal({ ...donationModal, isOpen: false })
     } catch (err) {
-      alert('Error updating donation status')
+      showAlert('Error', 'Error updating donation status', 'error')
     }
   }
 
@@ -616,7 +692,7 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-6 py-4">
                                 <button
-                                  onClick={() => toggleDonated(booking.id, !!booking.donated)}
+                                  onClick={() => openDonationModal(booking)}
                                   className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-tight transition-all border ${booking.donated
                                     ? 'bg-green-100 text-green-700 border-green-200'
                                     : 'bg-gray-100 text-gray-500 border-gray-200 hover:border-gray-300'
@@ -625,7 +701,7 @@ export default function AdminDashboard() {
                                   {booking.donated ? (
                                     <>
                                       <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                                      Donated
+                                      Donated: ${booking.donation_amount || 0}
                                     </>
                                   ) : (
                                     <>
@@ -684,6 +760,7 @@ export default function AdminDashboard() {
                           <th className="px-6 py-3">Customer</th>
                           <th className="px-6 py-3">Vehicle</th>
                           <th className="px-6 py-3">Slot</th>
+                          <th className="px-6 py-3">Donation</th>
                           <th className="px-6 py-3 text-right">Status</th>
                         </tr>
                       </thead>
@@ -700,6 +777,27 @@ export default function AdminDashboard() {
                             </td>
                             <td className="px-6 py-3 text-sm text-gray-500">
                               {booking.slots ? format(new Date(booking.slots.start_time), 'MMM d, h:mm a') : 'N/A'}
+                            </td>
+                            <td className="px-6 py-3">
+                              <button
+                                onClick={() => openDonationModal(booking)}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-tight transition-all border ${booking.donated
+                                  ? 'bg-green-100 text-green-700 border-green-200'
+                                  : 'bg-gray-100 text-gray-500 border-gray-200 hover:border-gray-300'
+                                  }`}
+                              >
+                                {booking.donated ? (
+                                  <>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                    ${booking.donation_amount || 0}
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                                    Not Paid
+                                  </>
+                                )}
+                              </button>
                             </td>
                             <td className="px-6 py-3 text-right flex items-center justify-end gap-3">
                               <span className="text-green-600 text-xs font-bold uppercase tracking-wider flex items-center gap-1">
@@ -1195,6 +1293,75 @@ export default function AdminDashboard() {
           )}
         </main>
       </div>
+      
+      {/* Modals */}
+      <AlertModal
+        isOpen={alertConfig.isOpen}
+        onClose={() => setAlertConfig({ ...alertConfig, isOpen: false })}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        type={alertConfig.type}
+      />
+
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText={confirmConfig.confirmText}
+        variant={confirmConfig.variant}
+      />
+
+      {/* Donation Modal */}
+      <Modal
+        isOpen={donationModal.isOpen}
+        onClose={() => setDonationModal({ ...donationModal, isOpen: false })}
+        title={`Donation: ${donationModal.customerName}`}
+      >
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">Donation Amount ($)</label>
+            <div className="relative">
+              <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                placeholder="0.00"
+                value={donationInput}
+                onChange={(e) => setDonationInput(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary outline-none text-lg font-bold"
+              />
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <button
+              onClick={() => handleDonationUpdate(false)}
+              className="w-full bg-primary text-white py-3 rounded-xl font-bold hover:bg-opacity-90 transition-all shadow-md"
+            >
+              {donationModal.isDonated ? 'Update Amount' : 'Mark as Donated'}
+            </button>
+            
+            {donationModal.isDonated && (
+              <button
+                onClick={() => handleDonationUpdate(true)}
+                className="w-full bg-white text-red-600 border border-red-200 py-3 rounded-xl font-bold hover:bg-red-50 transition-all"
+              >
+                Unmark as Donated
+              </button>
+            )}
+            
+            <button
+              onClick={() => setDonationModal({ ...donationModal, isOpen: false })}
+              className="w-full bg-gray-50 text-gray-500 py-3 rounded-xl font-bold hover:bg-gray-100 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   )
 }
