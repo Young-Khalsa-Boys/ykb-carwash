@@ -402,8 +402,11 @@ export default function AdminDashboard() {
           }
         }
       )
+    } catch (err: any) {
+      showAlert('Error', 'Error mass creating slots: ' + err.message, 'error')
+    } finally {
       setIsGenerating(false)
-      return
+    }
   }
 
   async function deleteSlot(id: string) {
