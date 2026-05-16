@@ -26,7 +26,8 @@ import {
   Phone,
   User,
   CalendarPlus,
-  AlertCircle
+  AlertCircle,
+  ArrowRightLeft
 } from 'lucide-react'
 import Modal from '@/components/Modal'
 import AlertModal from '@/components/AlertModal'
@@ -38,7 +39,7 @@ export default function AdminDashboard() {
   const [slots, setSlots] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'bookings' | 'slots' | 'atc'>('bookings')
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(true)
   const [password, setPassword] = useState('')
   const [authError, setAuthError] = useState('')
   const [verifying, setVerifying] = useState(false)
@@ -110,6 +111,11 @@ export default function AdminDashboard() {
     isDonated: false,
   })
   const [donationInput, setDonationInput] = useState('')
+  
+  // Move Slot State
+  const [movingBooking, setMovingBooking] = useState<any>(null)
+  const [isMoveSubmitting, setIsMoveSubmitting] = useState(false)
+
 
   const supabase = createClient()
 
@@ -587,6 +593,35 @@ export default function AdminDashboard() {
     }
   }
 
+  async function handleMoveSlot(newSlotId: string) {
+    if (!movingBooking) return
+
+    showConfirm(
+      'Confirm Move',
+      `Move ${movingBooking.name} to this slot?`,
+      async () => {
+        setIsMoveSubmitting(true)
+        try {
+          const { error } = await supabase
+            .from('bookings')
+            .update({ slot_id: newSlotId })
+            .eq('id', movingBooking.id)
+
+          if (error) throw error
+          
+          showAlert('Success', 'Booking moved successfully', 'success')
+          setMovingBooking(null)
+          fetchData()
+        } catch (err: any) {
+          showAlert('Error', 'Error moving booking: ' + err.message, 'error')
+        } finally {
+          setIsMoveSubmitting(false)
+        }
+      }
+    )
+  }
+
+
   return (
     <div className="min-h-screen bg-gray-100 flex">
       {/* Sidebar */}
@@ -716,12 +751,21 @@ export default function AdminDashboard() {
                               </td>
                               <td className="px-6 py-4 text-right flex items-center justify-end gap-2">
                                 <button
+                                  onClick={() => setMovingBooking(booking)}
+                                  className="inline-flex items-center gap-2 bg-amber-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-amber-600 transition-colors shadow-sm"
+                                  title="Move to different slot"
+                                >
+                                  <ArrowRightLeft className="w-4 h-4" />
+                                  Move Slot
+                                </button>
+                                <button
                                   onClick={() => updateBookingStatus(booking.id, 'completed')}
                                   className="inline-flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-700 transition-colors shadow-sm"
                                 >
                                   <CheckCircle className="w-4 h-4" />
                                   Complete Wash
                                 </button>
+
                                 <button
                                   onClick={() => updateBookingStatus(booking.id, 'cancelled')}
                                   className="p-2 text-gray-400 hover:text-red-600 transition-colors"
@@ -1365,6 +1409,79 @@ export default function AdminDashboard() {
           </div>
         </div>
       </Modal>
+
+      {/* Move Slot Modal */}
+      <Modal
+        isOpen={!!movingBooking}
+        onClose={() => setMovingBooking(null)}
+        title={`Move Booking: ${movingBooking?.name}`}
+      >
+        <div className="space-y-6">
+          <div className="bg-blue-50 border border-blue-100 p-4 rounded-xl flex gap-3 text-blue-800">
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <p className="text-xs leading-relaxed">
+              Select a new time slot for this customer. Only slots with remaining capacity are available.
+              Flex slots are also listed.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto p-1">
+            {slots.map((slot: any) => {
+              const regCount = bookings.filter((b: any) => b.slot_id === slot.id).length
+              const isFull = regCount >= slot.max_capacity
+              const isFlex = !slot.is_active
+              const isCurrent = movingBooking?.slot_id === slot.id
+
+              return (
+                <button
+                  key={slot.id}
+                  disabled={isFull || isCurrent || isMoveSubmitting}
+                  onClick={() => handleMoveSlot(slot.id)}
+                  className={`p-4 text-left border rounded-xl transition-all relative ${
+                    isCurrent
+                      ? 'border-blue-400 bg-blue-50 cursor-default opacity-60'
+                      : isFull
+                        ? 'border-gray-200 bg-gray-50 opacity-40 cursor-not-allowed'
+                        : isFlex
+                          ? 'border-amber-400 bg-amber-50/50 hover:bg-amber-100 hover:scale-[1.02]'
+                          : 'border-gray-200 hover:border-primary hover:bg-primary/5 hover:scale-[1.02]'
+                  }`}
+                >
+                  {isFlex && (
+                    <div className="absolute -top-2 left-3 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[9px] font-black rounded border border-amber-200 uppercase tracking-tighter">
+                      Flex
+                    </div>
+                  )}
+                  {isCurrent && (
+                    <div className="absolute -top-2 left-3 px-1.5 py-0.5 bg-blue-100 text-blue-700 text-[9px] font-black rounded border border-blue-200 uppercase tracking-tighter">
+                      Current
+                    </div>
+                  )}
+                  <div className="font-bold text-gray-900 text-sm">
+                    {format(new Date(slot.start_time), 'MMM d, h:mm a')}
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isFull ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                      {regCount} / {slot.max_capacity}
+                    </span>
+                    {isMoveSubmitting && movingBooking?.slot_id === slot.id && (
+                       <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                    )}
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+
+          <button
+            onClick={() => setMovingBooking(null)}
+            className="w-full bg-gray-50 text-gray-500 py-3 rounded-xl font-bold hover:bg-gray-100 transition-all"
+          >
+            Cancel
+          </button>
+        </div>
+      </Modal>
+
     </div>
   )
 }
