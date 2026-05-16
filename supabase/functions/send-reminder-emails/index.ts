@@ -33,15 +33,16 @@ serve(async (req) => {
           start_time
         )
       `)
-      .eq('status', 'pending') // You might want to adjust this filter
-
+    
     if (bookingsError) {
       console.error('Error fetching bookings:', bookingsError)
       throw bookingsError
     }
 
+    console.log(`Found ${bookings?.length ?? 0} bookings total.`)
+
     if (!bookings || bookings.length === 0) {
-      return new Response(JSON.stringify({ message: 'No bookings found to notify.' }), {
+      return new Response(JSON.stringify({ message: 'No bookings found in the database.' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 200,
       })
@@ -50,7 +51,17 @@ serve(async (req) => {
     console.log(`Preparing to send ${bookings.length} reminder emails...`)
 
     const emails = bookings.map((booking: any) => {
+      if (!booking.email) {
+        console.warn(`Booking ${booking.id} has no email, skipping.`)
+        return null
+      }
+      
       const slot = Array.isArray(booking.slots) ? booking.slots[0] : booking.slots
+      if (!slot || !slot.start_time) {
+        console.warn(`Booking ${booking.id} (${booking.name}) has no slot start time, skipping.`)
+        return null
+      }
+
       const startTime = new Date(slot.start_time)
       const formattedTime = startTime.toLocaleTimeString('en-US', {
         hour: 'numeric',
@@ -163,7 +174,14 @@ serve(async (req) => {
         subject: 'Reminder: Your Car Wash Appointment is Tomorrow!',
         html: emailHtml,
       }
-    })
+    }).filter(email => email !== null)
+
+    if (emails.length === 0) {
+      return new Response(JSON.stringify({ message: 'No valid bookings with email and slot info found.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
+      })
+    }
 
     // Resend Batch API allows up to 100 emails per request
     const batchSize = 100
