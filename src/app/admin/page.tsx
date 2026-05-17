@@ -54,6 +54,7 @@ export default function AdminDashboard() {
 
   const [editingSlot, setEditingSlot] = useState<any>(null)
   const [showCompleted, setShowCompleted] = useState(false)
+  const [showUnbooked, setShowUnbooked] = useState(false)
   const [atcForm, setAtcForm] = useState({
     name: '',
     phone: '',
@@ -266,8 +267,11 @@ export default function AdminDashboard() {
     return grouped
   }
 
-  const completedBookings = bookings.filter((b: any) => b.status === 'completed')
-  const waitingBookings = bookings.filter((b: any) => b.status === 'pending' || b.status === 'waiting')
+  const activeBookings = bookings.filter((b: any) => b.booked !== false)
+  const unbookedBookings = bookings.filter((b: any) => b.booked === false)
+
+  const completedBookings = activeBookings.filter((b: any) => b.status === 'completed')
+  const waitingBookings = activeBookings.filter((b: any) => b.status === 'pending' || b.status === 'waiting')
 
   const getWaitingBookingsBySlot = () => {
     const grouped: Record<string, any[]> = {}
@@ -551,7 +555,7 @@ export default function AdminDashboard() {
     showConfirm(title, confirmMsg, async () => {
       try {
         if (status === 'cancelled') {
-          const { error } = await supabase.from('bookings').delete().eq('id', id)
+          const { error } = await supabase.from('bookings').update({ booked: false }).eq('id', id)
           if (error) throw error
         } else {
           const { error } = await supabase.from('bookings').update({ status }).eq('id', id)
@@ -602,7 +606,7 @@ export default function AdminDashboard() {
     try {
       const { error } = await supabase
         .from('bookings')
-        .update({ slot_id: selectedNewSlotId })
+        .update({ slot_id: selectedNewSlotId, booked: true })
         .eq('id', movingBooking.id)
 
       if (error) throw error
@@ -684,7 +688,7 @@ export default function AdminDashboard() {
                 </h3>
 
                 {slots.filter((s: any) => bookingsBySlot[s.id]?.length > 0).map((slot: any) => {
-                  const totalRegCount = bookings.filter((b: any) => b.slot_id === slot.id).length
+                  const totalRegCount = activeBookings.filter((b: any) => b.slot_id === slot.id).length
                   return (
                     <div key={slot.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                       <div className="bg-gray-50 px-6 py-3 border-b border-gray-200 flex justify-between items-center">
@@ -864,6 +868,81 @@ export default function AdminDashboard() {
                   </div>
                 )}
               </div>
+
+              {/* Unbooked Bookings Collapsible */}
+              <div className="mt-8">
+                <button
+                  onClick={() => setShowUnbooked(!showUnbooked)}
+                  className="flex items-center gap-2 text-gray-500 hover:text-gray-700 font-semibold transition-colors"
+                >
+                  {showUnbooked ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                  Unbooked Customers ({unbookedBookings.length})
+                </button>
+
+                {showUnbooked && (
+                  <div className="mt-4 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden opacity-80">
+                    <table className="w-full text-left">
+                      <thead className="bg-gray-50 text-gray-600 text-xs font-semibold border-b border-gray-200">
+                        <tr>
+                          <th className="px-6 py-3">Customer</th>
+                          <th className="px-6 py-3">Vehicle</th>
+                          <th className="px-6 py-3">Original Sign Up</th>
+                          <th className="px-6 py-3">Donation</th>
+                          <th className="px-6 py-3 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {unbookedBookings.map((booking: any) => (
+                          <tr key={booking.id}>
+                            <td className="px-6 py-3 text-sm">
+                              <div className="font-medium text-gray-900">{booking.name}</div>
+                              <div className="text-[10px] text-gray-400">{formatPhone(booking.phone)}</div>
+                              <div className="text-[10px] text-gray-400">{booking.email}</div>
+                            </td>
+                            <td className="px-6 py-3 text-sm">
+                              <div className="text-gray-600">{booking.vehicle_color} {booking.vehicle_make_model}</div>
+                            </td>
+                            <td className="px-6 py-3 text-sm text-gray-500">
+                              {format(new Date(booking.created_at), 'MMM d, h:mm a')}
+                            </td>
+                            <td className="px-6 py-3">
+                              <button
+                                onClick={() => openDonationModal(booking)}
+                                className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-tight transition-all border ${booking.donated
+                                  ? 'bg-green-100 text-green-700 border-green-200'
+                                  : 'bg-gray-100 text-gray-500 border-gray-200 hover:border-gray-300'
+                                  }`}
+                              >
+                                {booking.donated ? (
+                                  <>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
+                                    ${booking.donation_amount || 0}
+                                  </>
+                                ) : (
+                                  <>
+                                    <div className="w-1.5 h-1.5 rounded-full bg-gray-400"></div>
+                                    Not Paid
+                                  </>
+                                )}
+                              </button>
+                            </td>
+                            <td className="px-6 py-3 text-right flex items-center justify-end gap-3">
+                                <button
+                                  onClick={() => setMovingBooking(booking)}
+                                  className="inline-flex items-center gap-2 bg-amber-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-amber-600 transition-colors shadow-sm"
+                                  title="Rebook Customer"
+                                >
+                                  <ArrowRightLeft className="w-4 h-4" />
+                                  Rebook
+                                </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           ) : activeTab === 'atc' ? (
             <div className="max-w-4xl mx-auto">
@@ -966,7 +1045,7 @@ export default function AdminDashboard() {
                     </h4>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       {slots.map((slot: any) => {
-                        const regCount = bookings.filter((b: any) => b.slot_id === slot.id).length
+                        const regCount = activeBookings.filter((b: any) => b.slot_id === slot.id).length
                         const isFull = regCount >= slot.max_capacity
                         const isFlex = !slot.is_active
                         const isSelected = atcForm.selectedSlot === slot.id
@@ -1266,7 +1345,7 @@ export default function AdminDashboard() {
               {/* Slots List */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {slots.map((slot: any) => {
-                  const regCount = bookings.filter((b: any) => b.slot_id === slot.id).length
+                  const regCount = activeBookings.filter((b: any) => b.slot_id === slot.id).length
                   return (
                     <div key={slot.id} className={`bg-white p-6 rounded-xl shadow-sm border group hover:border-primary/50 transition-all relative ${!slot.is_active ? 'border-amber-200 bg-amber-50/30' : 'border-gray-200'}`}>
                       {!slot.is_active && (
@@ -1428,7 +1507,7 @@ export default function AdminDashboard() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto p-1">
             {slots.map((slot: any) => {
-              const regCount = bookings.filter((b: any) => b.slot_id === slot.id).length
+              const regCount = activeBookings.filter((b: any) => b.slot_id === slot.id).length
               const isFull = regCount >= slot.max_capacity
               const isFlex = !slot.is_active
               const isCurrent = movingBooking?.slot_id === slot.id
