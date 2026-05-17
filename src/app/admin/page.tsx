@@ -1515,7 +1515,7 @@ export default function AdminDashboard() {
               const regCount = activeBookings.filter((b: any) => b.slot_id === slot.id).length
               const isFull = regCount >= slot.max_capacity
               const isFlex = !slot.is_active
-              const isCurrent = movingBooking?.slot_id === slot.id
+              const isCurrent = movingBooking?.slot_id === slot.id && movingBooking?.status !== 'unbooked'
               const isSelected = selectedNewSlotId === slot.id
 
               return (
