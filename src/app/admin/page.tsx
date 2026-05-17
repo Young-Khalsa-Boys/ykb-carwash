@@ -267,8 +267,8 @@ export default function AdminDashboard() {
     return grouped
   }
 
-  const activeBookings = bookings.filter((b: any) => b.booked !== false)
-  const unbookedBookings = bookings.filter((b: any) => b.booked === false)
+  const activeBookings = bookings.filter((b: any) => b.status !== 'unbooked')
+  const unbookedBookings = bookings.filter((b: any) => b.status === 'unbooked')
 
   const completedBookings = activeBookings.filter((b: any) => b.status === 'completed')
   const waitingBookings = activeBookings.filter((b: any) => b.status === 'pending' || b.status === 'waiting')
@@ -555,7 +555,7 @@ export default function AdminDashboard() {
     showConfirm(title, confirmMsg, async () => {
       try {
         if (status === 'cancelled') {
-          const { error } = await supabase.from('bookings').update({ booked: false }).eq('id', id)
+          const { error } = await supabase.from('bookings').update({ status: 'unbooked' }).eq('id', id)
           if (error) throw error
         } else {
           const { error } = await supabase.from('bookings').update({ status }).eq('id', id)
@@ -604,9 +604,14 @@ export default function AdminDashboard() {
 
     setIsMoveSubmitting(true)
     try {
+      const updates: any = { slot_id: selectedNewSlotId }
+      if (movingBooking.status === 'unbooked') {
+        updates.status = 'waiting'
+      }
+
       const { error } = await supabase
         .from('bookings')
-        .update({ slot_id: selectedNewSlotId, booked: true })
+        .update(updates)
         .eq('id', movingBooking.id)
 
       if (error) throw error
